@@ -4,11 +4,13 @@ Extensión de Chrome para detectar la probabilidad de que los usuarios de ForoCo
 
 ## 📸 Características
 
-- **Análisis completo**: Analiza automáticamente a **todos los usuarios** del hilo
+- **Doble modo de funcionamiento**:
+  - 📋 **En listados**: Muestra el badge del OP junto al título de cada hilo
+  - 💬 **En hilos**: Analiza a todos los usuarios que participan
 - **Badge visual**: Muestra junto a cada nickname un indicador con la probabilidad de troll
 - **Indicador de OP**: El creador del hilo aparece con una 👑 corona
 - **Panel de configuración**: Personaliza umbrales, pesos y gestiona usuarios fiables
-- **Lista de usuarios fiables**: Marca usuarios de confianza que siempre aparecerán en verde
+- **Lista de usuarios fiables**: Marca usuarios de confianza que siempre aparecerán en azul
 - **Caché inteligente**: Guarda datos durante 24h para mayor velocidad
 - **Código de colores**:
   - ✅ **Azul** - Usuario marcado como fiable (whitelist)
@@ -18,18 +20,28 @@ Extensión de Chrome para detectar la probabilidad de que los usuarios de ForoCo
 
 ## 🎯 Uso
 
-1. Navega a cualquier hilo de ForoCoches (`showthread.php`)
-2. La extensión analizará automáticamente a **todos los usuarios** del hilo
-3. Aparecerá un badge junto a cada nombre con la probabilidad
-4. El **OP** (creador del hilo) tiene una 👑 corona junto a su badge
-5. Pasa el ratón sobre cualquier badge para ver detalles:
-   - Fecha de registro
-   - Número de hilos
-   - Número de mensajes
-   - Mensajes por día
-   - Antigüedad de la cuenta
+### 📋 En el listado de foros (`forumdisplay.php`)
 
-### Ejemplo visual:
+1. Navega a cualquier foro (ej: General, Coches, etc.)
+2. La extensión analizará al **OP de cada hilo** del listado
+3. Aparece un badge compacto junto al título de cada hilo
+4. Sabrás de un vistazo si el creador del hilo es sospechoso
+
+```
+🔴 75% En dos semanas voy a Bratislava...    ← OP sospechoso
+🟢 12% Peña Real Oviedo Vol. LVII            ← OP veterano
+🟡 45% Sorteo 5 invis by the face            ← OP con precaución
+✅     LLEVO 1 MES ESTUDIANDO ALEMÁN         ← OP en tu whitelist
+```
+
+### 💬 Dentro de un hilo (`showthread.php`)
+
+1. Navega a cualquier hilo
+2. La extensión analizará a **todos los usuarios** del hilo
+3. Aparecerá un badge junto a cada nombre con la probabilidad
+4. El **OP** tiene una 👑 corona junto a su badge
+5. Pasa el ratón sobre cualquier badge para ver detalles
+
 ```
 Putérnico 🔴 75% 👑    ← OP del hilo con alta probabilidad
 AspirinaC ✅ Fiable    ← Usuario en tu whitelist
@@ -113,9 +125,9 @@ Después de hacer cambios en los archivos:
 
 ```
 Plugin/
-├── manifest.json      # Configuración de la extensión (v1.1.0)
-├── content.js         # Script principal de detección
-├── styles.css         # Estilos de los badges
+├── manifest.json      # Configuración de la extensión (v1.2.0)
+├── content.js         # Script principal (detecta listado vs hilo)
+├── styles.css         # Estilos de los badges (normal y compacto)
 ├── popup.html         # Panel de configuración
 ├── popup.css          # Estilos del panel
 ├── popup.js           # Lógica del panel
@@ -168,6 +180,13 @@ El algoritmo es una herramienta orientativa basada en estadísticas públicas. U
 ¿Ideas para mejorar el algoritmo? ¿Bugs? ¡Las contribuciones son bienvenidas!
 
 ## 📋 Changelog
+
+### v1.2.0
+- ✨ **Soporte para listado de foros** (`forumdisplay.php`)
+- ✨ Análisis del OP de cada hilo en el listado
+- ✨ Badge compacto para el listado
+- ✨ Caché de OPs de hilos para mayor velocidad
+- 🔧 Código refactorizado y optimizado
 
 ### v1.1.0
 - ✨ Panel de configuración con popup

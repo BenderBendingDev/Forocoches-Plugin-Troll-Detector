@@ -1,28 +1,25 @@
 /**
  * ForoCoches Troll Detector
  * 
- * Detecta la probabilidad de que los usuarios de un hilo sean trolls
+ * Detecta la probabilidad de que los usuarios de ForoCoches sean trolls
  * basándose en: fecha de registro, hilos abiertos y mensajes/día
+ * 
+ * Funciona en:
+ * - Hilos (showthread.php): Analiza todos los usuarios del hilo
+ * - Listado de foros (forumdisplay.php): Analiza el OP de cada hilo
  * 
  * DISCLAIMER:
  * -----------
  * Este proyecto es independiente y NO está afiliado, patrocinado ni
  * respaldado por ForoCoches.com ni por Link World Network S.L.
  * 
- * La extensión solo accede a datos públicamente disponibles en los
- * perfiles de usuario. No recaba datos con fines publicitarios ni
- * comerciales. Es un proyecto de código abierto sin ánimo de lucro.
- * 
- * El uso de esta extensión es responsabilidad del usuario.
- * 
  * @license MIT
- * @author Proyecto de código abierto
  */
 
 (function() {
     'use strict';
 
-    // Configuración por defecto (se sobrescribe con la del usuario)
+    // Configuración por defecto
     let CONFIG = {
         PESO_ANTIGUEDAD: 0.5,
         PESO_ACTIVIDAD: 0.5,
@@ -30,26 +27,31 @@
         UMBRAL_MEDIO: 40,
         DIAS_CUENTA_NUEVA: 365,
         MENSAJES_DIA_ALTO: 10,
-        DELAY_ENTRE_PETICIONES: 200,
+        DELAY_ENTRE_PETICIONES: 50,
         MAX_USUARIOS_POR_PAGINA: 50,
+        MAX_HILOS_POR_PAGINA: 40,
+        CONCURRENCIA_LISTADO: 6,  // Peticiones simultáneas en listado
+        CONCURRENCIA_HILO: 4,     // Peticiones simultáneas en hilo
         USUARIOS_FIABLES: [],
         MOSTRAR_TOOLTIP: true,
         ANALIZAR_AUTO: true
     };
 
-    // Caché de usuarios ya analizados
+    // Caché de usuarios
     const cacheUsuarios = new Map();
+    
+    // Caché de OPs de hilos (threadId -> userId)
+    const cacheOPsHilos = new Map();
 
-    // Meses en español para parsear fechas
+    // Meses en español
     const MESES = {
         'ene': 0, 'feb': 1, 'mar': 2, 'abr': 3,
         'may': 4, 'jun': 5, 'jul': 6, 'ago': 7,
         'sep': 8, 'oct': 9, 'nov': 10, 'dic': 11
     };
 
-    /**
-     * Carga la configuración desde chrome.storage
-     */
+    // ==================== CONFIGURACIÓN ====================
+
     async function cargarConfiguracion() {
         try {
             const result = await chrome.storage.sync.get('fcTrollConfig');
@@ -63,85 +65,100 @@
                 CONFIG.MOSTRAR_TOOLTIP = c.mostrarTooltip !== false;
                 CONFIG.ANALIZAR_AUTO = c.analizarAuto !== false;
             }
-            console.log('🔧 FC Troll Detector: Configuración cargada', CONFIG);
         } catch (error) {
-            console.warn('FC Troll Detector: Usando configuración por defecto', error);
+            console.warn('FC Troll Detector: Usando configuración por defecto');
         }
     }
 
-    /**
-     * Escucha cambios en la configuración
-     */
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    chrome.runtime.onMessage.addListener((message) => {
         if (message.tipo === 'CONFIG_ACTUALIZADA') {
-            console.log('🔄 FC Troll Detector: Configuración actualizada, recargando...');
             location.reload();
         }
     });
 
-    /**
-     * Verifica si un usuario está en la lista de fiables
-     */
+    // ==================== UTILIDADES ====================
+
     function esUsuarioFiable(nombreUsuario) {
         return CONFIG.USUARIOS_FIABLES.includes(nombreUsuario.toLowerCase());
     }
 
-    /**
-     * Parsea una fecha en formato "DD-mes-YYYY" (ej: "29-ene-2014")
-     */
     function parsearFechaFC(fechaStr) {
         const partes = fechaStr.toLowerCase().trim().split('-');
         if (partes.length !== 3) return null;
-        
         const dia = parseInt(partes[0], 10);
         const mes = MESES[partes[1]];
         const anio = parseInt(partes[2], 10);
-        
         if (isNaN(dia) || mes === undefined || isNaN(anio)) return null;
-        
         return new Date(anio, mes, dia);
     }
 
-    /**
-     * Calcula los días desde una fecha hasta hoy
-     */
     function diasDesde(fecha) {
         const hoy = new Date();
         const diffTime = Math.abs(hoy - fecha);
         return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
 
+    function esperar(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     /**
-     * Calcula la probabilidad de troll (0-100)
+     * Procesa un array de tareas en paralelo con límite de concurrencia
      */
+    async function procesarEnParalelo(items, procesarFn, concurrencia) {
+        const resultados = [];
+        const enProceso = new Set();
+        const cola = [...items];
+        
+        return new Promise((resolve) => {
+            const procesarSiguiente = async () => {
+                if (cola.length === 0 && enProceso.size === 0) {
+                    resolve(resultados);
+                    return;
+                }
+                
+                while (enProceso.size < concurrencia && cola.length > 0) {
+                    const item = cola.shift();
+                    const promesa = procesarFn(item)
+                        .then(resultado => {
+                            resultados.push(resultado);
+                            enProceso.delete(promesa);
+                            procesarSiguiente();
+                        })
+                        .catch(() => {
+                            enProceso.delete(promesa);
+                            procesarSiguiente();
+                        });
+                    enProceso.add(promesa);
+                }
+            };
+            
+            procesarSiguiente();
+        });
+    }
+
+    // ==================== ALGORITMO ====================
+
     function calcularProbabilidadTroll(fechaRegistro, numHilos, numMensajes) {
         const diasRegistrado = diasDesde(fechaRegistro);
         
-        // Factor antigüedad (0-100): más nuevo = más puntos
-        const diasMaxReferencia = 365 * 10; // 10 años como referencia
+        const diasMaxReferencia = 365 * 10;
         const factorAntiguedad = Math.max(0, 100 - (diasRegistrado / diasMaxReferencia) * 100);
         
-        // Factor actividad: mensajes por día
         const mensajesPorDia = diasRegistrado > 0 ? numMensajes / diasRegistrado : numMensajes;
         const hilosPorDia = diasRegistrado > 0 ? numHilos / diasRegistrado : numHilos;
-        
-        // Actividad combinada
         const actividadDiaria = mensajesPorDia + (hilosPorDia * 5);
         
-        // Factor actividad (0-100)
         const actividadMaxReferencia = 20;
         const factorActividad = Math.min(100, (actividadDiaria / actividadMaxReferencia) * 100);
         
-        // Combinación ponderada con pesos configurables
         let probabilidad = (factorAntiguedad * CONFIG.PESO_ANTIGUEDAD) + 
                           (factorActividad * CONFIG.PESO_ACTIVIDAD);
         
-        // Bonus: cuenta muy nueva con mucha actividad
         if (diasRegistrado < CONFIG.DIAS_CUENTA_NUEVA && mensajesPorDia > CONFIG.MENSAJES_DIA_ALTO) {
             probabilidad = Math.min(100, probabilidad * 1.2);
         }
         
-        // Penalización: cuenta antigua con poca actividad
         if (diasRegistrado > 365 * 3 && mensajesPorDia < 2) {
             probabilidad = Math.max(0, probabilidad * 0.7);
         }
@@ -149,9 +166,6 @@
         return Math.round(probabilidad);
     }
 
-    /**
-     * Determina el nivel de riesgo basado en la probabilidad
-     */
     function getNivelRiesgo(probabilidad) {
         if (probabilidad >= CONFIG.UMBRAL_ALTO) {
             return { nivel: 'alto', emoji: '🔴', clase: 'troll-alto' };
@@ -161,37 +175,31 @@
         return { nivel: 'bajo', emoji: '🟢', clase: 'troll-bajo' };
     }
 
-    /**
-     * Crea el elemento badge para mostrar junto al nickname
-     */
-    function crearBadge(probabilidad, datos, esOP = false, esFiable = false) {
+    // ==================== BADGES ====================
+
+    function crearBadge(probabilidad, datos, esOP = false, esFiable = false, compacto = false) {
         let riesgo;
-        let textoExtra = '';
         
         if (esFiable) {
-            // Usuario marcado como fiable
             riesgo = { nivel: 'fiable', emoji: '✅', clase: 'troll-fiable' };
-            textoExtra = ' ⭐';
         } else {
             riesgo = getNivelRiesgo(probabilidad);
         }
         
         const badge = document.createElement('span');
-        badge.className = `fc-troll-badge ${riesgo.clase}`;
+        badge.className = `fc-troll-badge ${riesgo.clase}${compacto ? ' fc-badge-compact' : ''}`;
         
-        // Mostrar indicador de OP si corresponde
         const opIndicator = esOP ? ' 👑' : '';
         
         if (esFiable) {
-            badge.innerHTML = `${riesgo.emoji} Fiable${opIndicator}`;
+            badge.innerHTML = compacto ? '✅' : `${riesgo.emoji} Fiable${opIndicator}`;
         } else {
-            badge.innerHTML = `${riesgo.emoji} ${probabilidad}%${opIndicator}${textoExtra}`;
+            badge.innerHTML = `${riesgo.emoji} ${probabilidad}%${opIndicator}`;
         }
         
-        // Tooltip con información detallada
-        if (CONFIG.MOSTRAR_TOOLTIP) {
+        if (CONFIG.MOSTRAR_TOOLTIP && datos) {
             const tipoUsuario = esOP ? '(OP) ' : '';
-            const fiableText = esFiable ? '⭐ USUARIO FIABLE (whitelist)\n' : '';
+            const fiableText = esFiable ? '⭐ USUARIO FIABLE\n' : '';
             badge.title = `${fiableText}🎯 ${tipoUsuario}Probabilidad Troll: ${probabilidad}%\n` +
                          `📅 Registro: ${datos.fechaRegistroStr}\n` +
                          `📝 Hilos: ${datos.hilos}\n` +
@@ -203,45 +211,37 @@
         return badge;
     }
 
-    /**
-     * Crea un badge de carga
-     */
-    function crearBadgeCargando() {
+    function crearBadgeCargando(compacto = false) {
         const badge = document.createElement('span');
-        badge.className = 'fc-troll-badge fc-troll-loading';
+        badge.className = `fc-troll-badge fc-troll-loading${compacto ? ' fc-badge-compact' : ''}`;
         badge.innerHTML = '⏳';
-        badge.title = 'Analizando usuario...';
+        badge.title = 'Analizando...';
         return badge;
     }
 
-    /**
-     * Obtiene los datos del usuario desde su página de perfil
-     */
+    // ==================== OBTENCIÓN DE DATOS ====================
+
     async function obtenerDatosUsuario(urlPerfil) {
         const match = urlPerfil.match(/u=(\d+)/);
         const userId = match ? match[1] : urlPerfil;
         
-        // Verificar caché en memoria
         if (cacheUsuarios.has(userId)) {
             return cacheUsuarios.get(userId);
         }
         
-        // Verificar caché en localStorage
+        // Caché en localStorage
         try {
             const cacheKey = `fc_troll_cache_${userId}`;
             const cached = localStorage.getItem(cacheKey);
             if (cached) {
                 const data = JSON.parse(cached);
-                // Caché válida por 24 horas
                 if (Date.now() - data.timestamp < 24 * 60 * 60 * 1000) {
                     data.datos.fechaRegistro = new Date(data.datos.fechaRegistro);
                     cacheUsuarios.set(userId, data.datos);
                     return data.datos;
                 }
             }
-        } catch (e) {
-            // Ignorar errores de localStorage
-        }
+        } catch (e) {}
         
         try {
             const response = await fetch(urlPerfil);
@@ -249,7 +249,6 @@
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             
-            // Buscar fecha de registro
             let fechaRegistroStr = null;
             const allText = doc.body.textContent;
             const fechaMatch = allText.match(/Desde\s*(\d{1,2}-[a-z]{3}-\d{4})/i);
@@ -257,10 +256,8 @@
                 fechaRegistroStr = fechaMatch[1];
             }
             
-            // Buscar hilos y mensajes
             let hilos = 0;
             let mensajes = 0;
-            
             const textoCompleto = doc.body.textContent;
             
             const hilosMatch = textoCompleto.match(/([\d.,]+)\s*Hilos?/i);
@@ -273,21 +270,15 @@
                 mensajes = parseInt(mensajesMatch[1].replace(/[.,]/g, ''), 10);
             }
             
-            if (!fechaRegistroStr) {
-                console.warn('FC Troll Detector: No se pudo encontrar la fecha de registro para', urlPerfil);
-                return null;
-            }
+            if (!fechaRegistroStr) return null;
             
             const fechaRegistro = parsearFechaFC(fechaRegistroStr);
-            if (!fechaRegistro) {
-                console.warn('FC Troll Detector: No se pudo parsear la fecha:', fechaRegistroStr);
-                return null;
-            }
+            if (!fechaRegistro) return null;
             
             const diasRegistrado = diasDesde(fechaRegistro);
             
             const datos = {
-                fechaRegistro: fechaRegistro,
+                fechaRegistro,
                 fechaRegistroStr,
                 hilos,
                 mensajes,
@@ -295,39 +286,68 @@
                 mensajesDia: diasRegistrado > 0 ? mensajes / diasRegistrado : mensajes
             };
             
-            // Guardar en caché de memoria
             cacheUsuarios.set(userId, datos);
             
-            // Guardar en localStorage
             try {
-                const cacheKey = `fc_troll_cache_${userId}`;
-                localStorage.setItem(cacheKey, JSON.stringify({
+                localStorage.setItem(`fc_troll_cache_${userId}`, JSON.stringify({
                     timestamp: Date.now(),
-                    datos: datos
+                    datos
                 }));
-            } catch (e) {
-                // Ignorar errores de localStorage
-            }
+            } catch (e) {}
             
             return datos;
-            
         } catch (error) {
-            console.error('FC Troll Detector: Error obteniendo datos del usuario:', error);
+            console.error('FC Troll Detector: Error obteniendo datos:', error);
             return null;
         }
     }
 
     /**
-     * Función de espera
+     * Obtiene el userId del OP de un hilo accediendo a su primera página
      */
-    function esperar(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+    async function obtenerOPDeHilo(threadId) {
+        if (cacheOPsHilos.has(threadId)) {
+            return cacheOPsHilos.get(threadId);
+        }
+        
+        try {
+            const url = `https://forocoches.com/foro/showthread.php?t=${threadId}`;
+            const response = await fetch(url);
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Buscar el primer enlace de perfil de usuario
+            const mainContent = doc.querySelector('main');
+            if (!mainContent) return null;
+            
+            const enlaces = mainContent.querySelectorAll('a[href*="member.php?u="]:not([href*="u=0"])');
+            for (const enlace of enlaces) {
+                const texto = enlace.textContent.trim();
+                if (texto && !enlace.querySelector('img') && texto.length > 0 && texto.length < 50) {
+                    const href = enlace.href;
+                    const match = href.match(/u=(\d+)/);
+                    if (match) {
+                        const resultado = {
+                            userId: match[1],
+                            nombre: texto,
+                            href: href.startsWith('http') ? href : `https://forocoches.com/foro/${href}`
+                        };
+                        cacheOPsHilos.set(threadId, resultado);
+                        return resultado;
+                    }
+                }
+            }
+            return null;
+        } catch (error) {
+            console.error('FC Troll Detector: Error obteniendo OP del hilo:', error);
+            return null;
+        }
     }
 
-    /**
-     * Encuentra todos los usuarios únicos en el hilo
-     */
-    function encontrarUsuarios() {
+    // ==================== MODO HILO (showthread.php) ====================
+
+    function encontrarUsuariosEnHilo() {
         const mainContent = document.querySelector('main');
         if (!mainContent) return [];
         
@@ -345,7 +365,7 @@
                         usuariosMap.set(userId, {
                             userId,
                             nombre: texto,
-                            href: href,
+                            href,
                             elementos: [enlace]
                         });
                     } else {
@@ -358,71 +378,176 @@
         return Array.from(usuariosMap.values());
     }
 
-    /**
-     * Procesa un usuario y añade badges a todos sus elementos
-     */
-    async function procesarUsuario(usuario, esElOP) {
+    async function procesarUsuarioEnHilo(usuario, esElOP) {
         const esFiable = esUsuarioFiable(usuario.nombre);
         
-        // Añadir badges de carga
         const badgesCargando = [];
         for (const elemento of usuario.elementos) {
-            if (!elemento.nextSibling || !elemento.nextSibling.classList?.contains('fc-troll-badge')) {
+            if (!elemento.nextSibling?.classList?.contains('fc-troll-badge')) {
                 const loadingBadge = crearBadgeCargando();
                 elemento.parentNode.insertBefore(document.createTextNode(' '), elemento.nextSibling);
-                elemento.parentNode.insertBefore(loadingBadge, elemento.nextSibling.nextSibling);
+                elemento.parentNode.insertBefore(loadingBadge, elemento.nextSibling?.nextSibling);
                 badgesCargando.push(loadingBadge);
             }
         }
         
-        // Obtener datos del usuario
         const datos = await obtenerDatosUsuario(usuario.href);
         
-        // Eliminar badges de carga
         for (const badge of badgesCargando) {
             badge.remove();
         }
         
-        if (!datos) {
-            return;
-        }
+        if (!datos) return;
         
-        // Calcular probabilidad
-        const probabilidad = calcularProbabilidadTroll(
-            datos.fechaRegistro,
-            datos.hilos,
-            datos.mensajes
-        );
+        const probabilidad = calcularProbabilidadTroll(datos.fechaRegistro, datos.hilos, datos.mensajes);
         
-        const logIcon = esFiable ? '⭐' : '📊';
-        console.log(`${logIcon} FC Troll Detector: ${usuario.nombre}`, {
-            probabilidad: `${probabilidad}%`,
-            esOP: esElOP,
-            esFiable,
-            ...datos
-        });
-        
-        // Añadir badges finales
         for (const elemento of usuario.elementos) {
             const siguiente = elemento.nextSibling;
-            if (siguiente && siguiente.nodeType === Node.TEXT_NODE) {
-                const siguienteSiguiente = siguiente.nextSibling;
-                if (siguienteSiguiente && siguienteSiguiente.classList?.contains('fc-troll-badge')) {
-                    continue;
-                }
+            if (siguiente?.nodeType === Node.TEXT_NODE) {
+                const ss = siguiente.nextSibling;
+                if (ss?.classList?.contains('fc-troll-badge')) continue;
             }
             
             const badge = crearBadge(probabilidad, datos, esElOP, esFiable);
             elemento.parentNode.insertBefore(document.createTextNode(' '), elemento.nextSibling);
-            elemento.parentNode.insertBefore(badge, elemento.nextSibling.nextSibling);
+            elemento.parentNode.insertBefore(badge, elemento.nextSibling?.nextSibling);
         }
     }
 
-    /**
-     * Función principal
-     */
-    async function ejecutarDetector() {
-        // Cargar configuración primero
+    async function ejecutarEnHilo() {
+        console.log('🔍 FC Troll Detector: Analizando hilo...');
+        
+        const usuarios = encontrarUsuariosEnHilo();
+        if (usuarios.length === 0) return;
+        
+        console.log(`👥 Encontrados ${usuarios.length} usuarios (procesando ${CONFIG.CONCURRENCIA_HILO} en paralelo)`);
+        
+        const usuariosAAnalizar = usuarios.slice(0, CONFIG.MAX_USUARIOS_POR_PAGINA);
+        
+        // El primer usuario (OP) se procesa primero
+        if (usuariosAAnalizar.length > 0) {
+            await procesarUsuarioEnHilo(usuariosAAnalizar[0], true);
+        }
+        
+        // El resto en paralelo
+        if (usuariosAAnalizar.length > 1) {
+            const resto = usuariosAAnalizar.slice(1);
+            await procesarEnParalelo(
+                resto,
+                (usuario) => procesarUsuarioEnHilo(usuario, false),
+                CONFIG.CONCURRENCIA_HILO
+            );
+        }
+        
+        console.log('✅ FC Troll Detector: Análisis de hilo completado');
+    }
+
+    // ==================== MODO LISTADO (forumdisplay.php) ====================
+
+    function encontrarHilosEnListado() {
+        const mainContent = document.querySelector('main');
+        if (!mainContent) return [];
+        
+        const hilos = [];
+        const procesados = new Set();
+        
+        // Buscar títulos de hilos por su ID
+        const titulosHilos = mainContent.querySelectorAll('a[id^="thread_title_"]');
+        
+        for (const tituloLink of titulosHilos) {
+            const threadId = tituloLink.id.replace('thread_title_', '');
+            if (procesados.has(threadId)) continue;
+            procesados.add(threadId);
+            
+            const titulo = tituloLink.textContent.trim();
+            
+            // Buscar el nombre del OP en el texto @Usuario
+            let container = tituloLink.parentElement;
+            let opNombre = null;
+            let opLinkElement = null;
+            
+            for (let i = 0; i < 5 && container; i++) {
+                const opLink = container.querySelector('a[href*="showthread.php?p="]');
+                if (opLink) {
+                    const opText = opLink.textContent;
+                    const match = opText.match(/@([^-]+)\s*-/);
+                    if (match) {
+                        opNombre = match[1].trim();
+                        opLinkElement = opLink;
+                        break;
+                    }
+                }
+                container = container.parentElement;
+            }
+            
+            if (opNombre && opLinkElement) {
+                hilos.push({
+                    threadId,
+                    titulo,
+                    opNombre,
+                    tituloElement: tituloLink,
+                    opElement: opLinkElement
+                });
+            }
+        }
+        
+        return hilos;
+    }
+
+    async function procesarHiloEnListado(hilo) {
+        const esFiable = esUsuarioFiable(hilo.opNombre);
+        
+        // Crear badge de carga junto al título
+        const loadingBadge = crearBadgeCargando(true);
+        hilo.tituloElement.parentNode.insertBefore(document.createTextNode(' '), hilo.tituloElement.nextSibling);
+        hilo.tituloElement.parentNode.insertBefore(loadingBadge, hilo.tituloElement.nextSibling?.nextSibling);
+        
+        // Obtener el OP del hilo
+        const opInfo = await obtenerOPDeHilo(hilo.threadId);
+        
+        loadingBadge.remove();
+        
+        if (!opInfo) return;
+        
+        // Obtener datos del perfil del OP
+        const datos = await obtenerDatosUsuario(opInfo.href);
+        
+        if (!datos) return;
+        
+        const probabilidad = calcularProbabilidadTroll(datos.fechaRegistro, datos.hilos, datos.mensajes);
+        
+        // Crear badge junto al título del hilo
+        const badge = crearBadge(probabilidad, datos, true, esFiable, true);
+        hilo.tituloElement.parentNode.insertBefore(document.createTextNode(' '), hilo.tituloElement.nextSibling);
+        hilo.tituloElement.parentNode.insertBefore(badge, hilo.tituloElement.nextSibling?.nextSibling);
+    }
+
+    async function ejecutarEnListado() {
+        console.log('🔍 FC Troll Detector: Analizando listado de hilos...');
+        
+        const hilos = encontrarHilosEnListado();
+        if (hilos.length === 0) {
+            console.warn('FC Troll Detector: No se encontraron hilos');
+            return;
+        }
+        
+        console.log(`📋 Encontrados ${hilos.length} hilos (procesando ${CONFIG.CONCURRENCIA_LISTADO} en paralelo)`);
+        
+        const hilosAAnalizar = hilos.slice(0, CONFIG.MAX_HILOS_POR_PAGINA);
+        
+        // Procesar en paralelo con límite de concurrencia
+        await procesarEnParalelo(
+            hilosAAnalizar,
+            procesarHiloEnListado,
+            CONFIG.CONCURRENCIA_LISTADO
+        );
+        
+        console.log('✅ FC Troll Detector: Análisis de listado completado');
+    }
+
+    // ==================== INICIO ====================
+
+    async function detectarYEjecutar() {
         await cargarConfiguracion();
         
         if (!CONFIG.ANALIZAR_AUTO) {
@@ -430,40 +555,20 @@
             return;
         }
         
-        console.log('🔍 FC Troll Detector: Iniciando análisis de todos los usuarios...');
+        const url = window.location.href;
         
-        const usuarios = encontrarUsuarios();
-        
-        if (usuarios.length === 0) {
-            console.warn('FC Troll Detector: No se encontraron usuarios');
-            return;
+        if (url.includes('showthread.php')) {
+            await ejecutarEnHilo();
+        } else if (url.includes('forumdisplay.php')) {
+            await ejecutarEnListado();
         }
-        
-        console.log(`👥 FC Troll Detector: Encontrados ${usuarios.length} usuarios únicos`);
-        
-        const usuariosAAnalizar = usuarios.slice(0, CONFIG.MAX_USUARIOS_POR_PAGINA);
-        
-        for (let i = 0; i < usuariosAAnalizar.length; i++) {
-            const usuario = usuariosAAnalizar[i];
-            const esElOP = i === 0;
-            
-            await procesarUsuario(usuario, esElOP);
-            
-            if (!cacheUsuarios.has(usuario.userId) && i < usuariosAAnalizar.length - 1) {
-                await esperar(CONFIG.DELAY_ENTRE_PETICIONES);
-            }
-        }
-        
-        console.log('✅ FC Troll Detector: Análisis completado');
     }
 
     // Ejecutar
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(ejecutarDetector, 500);
-        });
+        document.addEventListener('DOMContentLoaded', () => setTimeout(detectarYEjecutar, 500));
     } else {
-        setTimeout(ejecutarDetector, 500);
+        setTimeout(detectarYEjecutar, 500);
     }
 
 })();

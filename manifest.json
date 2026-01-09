@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FC Troll Detector (No oficial)",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Proyecto independiente sin ánimo de lucro. Detecta la probabilidad de troll basándose en datos públicos de actividad y registro. No afiliado a ForoCoches.",
   "permissions": [
     "storage"
@@ -18,7 +18,9 @@
     {
       "matches": [
         "*://forocoches.com/foro/showthread.php*",
-        "*://www.forocoches.com/foro/showthread.php*"
+        "*://www.forocoches.com/foro/showthread.php*",
+        "*://forocoches.com/foro/forumdisplay.php*",
+        "*://www.forocoches.com/foro/forumdisplay.php*"
       ],
       "js": ["content.js"],
       "css": ["styles.css"],
