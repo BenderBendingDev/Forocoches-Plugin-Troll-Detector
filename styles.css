@@ -124,6 +124,85 @@
     }
 }
 
+/* Contenedor de badge */
+.fc-badge-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    vertical-align: middle;
+}
+
+/* Botón de Whitelist */
+.fc-whitelist-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(128, 128, 128, 0.2);
+    color: #888;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0.6;
+}
+
+.fc-whitelist-btn:hover {
+    opacity: 1;
+    background: rgba(255, 215, 0, 0.3);
+    color: #ffd700;
+    transform: scale(1.1);
+}
+
+.fc-whitelist-btn.fc-whitelist-active {
+    opacity: 1;
+    background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+    color: #1a1a1a;
+}
+
+.fc-whitelist-btn.fc-whitelist-active:hover {
+    background: linear-gradient(135deg, #ffdd33 0%, #ffbb33 100%);
+}
+
+/* Botón compacto para listado */
+.fc-whitelist-btn.fc-btn-compact {
+    width: 14px;
+    height: 14px;
+    font-size: 8px;
+}
+
+/* Notificación */
+.fc-notificacion {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: linear-gradient(135deg, #333 0%, #1a1a1a 100%);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 999999;
+    opacity: 0;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fc-notificacion.fc-notif-visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.fc-notificacion.fc-notif-error {
+    background: linear-gradient(135deg, #cc0000 0%, #990000 100%);
+}
+
 /* Animación de entrada */
 @keyframes fc-badge-appear {
     0% {

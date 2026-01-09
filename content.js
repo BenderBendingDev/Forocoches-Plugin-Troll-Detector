@@ -175,9 +175,110 @@
         return { nivel: 'bajo', emoji: '🟢', clase: 'troll-bajo' };
     }
 
+    // ==================== WHITELIST ====================
+
+    async function toggleWhitelist(nombreUsuario, boton, badgeContainer) {
+        const nombreLower = nombreUsuario.toLowerCase();
+        const estaEnWhitelist = CONFIG.USUARIOS_FIABLES.includes(nombreLower);
+        
+        try {
+            const result = await chrome.storage.sync.get('fcTrollConfig');
+            const config = result.fcTrollConfig || {};
+            let lista = config.usuariosFiables || [];
+            
+            if (estaEnWhitelist) {
+                // Quitar de whitelist
+                lista = lista.filter(u => u.toLowerCase() !== nombreLower);
+                CONFIG.USUARIOS_FIABLES = CONFIG.USUARIOS_FIABLES.filter(u => u !== nombreLower);
+                boton.innerHTML = '⭐';
+                boton.title = `Añadir "${nombreUsuario}" a usuarios fiables`;
+                boton.classList.remove('fc-whitelist-active');
+                mostrarNotificacion(`❌ "${nombreUsuario}" quitado de fiables`);
+            } else {
+                // Añadir a whitelist
+                lista.push(nombreUsuario);
+                CONFIG.USUARIOS_FIABLES.push(nombreLower);
+                boton.innerHTML = '★';
+                boton.title = `Quitar "${nombreUsuario}" de usuarios fiables`;
+                boton.classList.add('fc-whitelist-active');
+                mostrarNotificacion(`✅ "${nombreUsuario}" añadido a fiables`);
+            }
+            
+            config.usuariosFiables = lista;
+            await chrome.storage.sync.set({ fcTrollConfig: config });
+            
+            // Actualizar todos los badges de este usuario en la página
+            actualizarBadgesUsuario(nombreUsuario);
+            
+        } catch (error) {
+            console.error('FC Troll Detector: Error actualizando whitelist:', error);
+            mostrarNotificacion('❌ Error al actualizar', true);
+        }
+    }
+
+    function mostrarNotificacion(mensaje, esError = false) {
+        // Eliminar notificación anterior si existe
+        const anterior = document.querySelector('.fc-notificacion');
+        if (anterior) anterior.remove();
+        
+        const notif = document.createElement('div');
+        notif.className = `fc-notificacion${esError ? ' fc-notif-error' : ''}`;
+        notif.textContent = mensaje;
+        document.body.appendChild(notif);
+        
+        // Mostrar con animación
+        setTimeout(() => notif.classList.add('fc-notif-visible'), 10);
+        
+        // Ocultar después de 2 segundos
+        setTimeout(() => {
+            notif.classList.remove('fc-notif-visible');
+            setTimeout(() => notif.remove(), 300);
+        }, 2000);
+    }
+
+    function actualizarBadgesUsuario(nombreUsuario) {
+        const esFiable = esUsuarioFiable(nombreUsuario);
+        const badges = document.querySelectorAll(`[data-usuario="${nombreUsuario.toLowerCase()}"]`);
+        
+        badges.forEach(container => {
+            const badge = container.querySelector('.fc-troll-badge');
+            const boton = container.querySelector('.fc-whitelist-btn');
+            
+            if (badge && !badge.classList.contains('fc-troll-loading')) {
+                const probabilidad = parseInt(badge.dataset.probabilidad) || 0;
+                const esOP = badge.dataset.esop === 'true';
+                const compacto = badge.classList.contains('fc-badge-compact');
+                
+                // Actualizar clase del badge
+                badge.classList.remove('troll-alto', 'troll-medio', 'troll-bajo', 'troll-fiable');
+                
+                if (esFiable) {
+                    badge.classList.add('troll-fiable');
+                    badge.innerHTML = compacto ? '✅' : `✅ Fiable${esOP ? ' 👑' : ''}`;
+                } else {
+                    const riesgo = getNivelRiesgo(probabilidad);
+                    badge.classList.add(riesgo.clase);
+                    badge.innerHTML = `${riesgo.emoji} ${probabilidad}%${esOP ? ' 👑' : ''}`;
+                }
+            }
+            
+            if (boton) {
+                if (esFiable) {
+                    boton.innerHTML = '★';
+                    boton.classList.add('fc-whitelist-active');
+                    boton.title = `Quitar "${nombreUsuario}" de usuarios fiables`;
+                } else {
+                    boton.innerHTML = '⭐';
+                    boton.classList.remove('fc-whitelist-active');
+                    boton.title = `Añadir "${nombreUsuario}" a usuarios fiables`;
+                }
+            }
+        });
+    }
+
     // ==================== BADGES ====================
 
-    function crearBadge(probabilidad, datos, esOP = false, esFiable = false, compacto = false) {
+    function crearBadge(probabilidad, datos, esOP = false, esFiable = false, compacto = false, nombreUsuario = '') {
         let riesgo;
         
         if (esFiable) {
@@ -188,6 +289,8 @@
         
         const badge = document.createElement('span');
         badge.className = `fc-troll-badge ${riesgo.clase}${compacto ? ' fc-badge-compact' : ''}`;
+        badge.dataset.probabilidad = probabilidad;
+        badge.dataset.esop = esOP;
         
         const opIndicator = esOP ? ' 👑' : '';
         
@@ -209,6 +312,32 @@
         }
         
         return badge;
+    }
+
+    function crearBotonWhitelist(nombreUsuario, esFiable, compacto = false) {
+        const boton = document.createElement('button');
+        boton.className = `fc-whitelist-btn${compacto ? ' fc-btn-compact' : ''}${esFiable ? ' fc-whitelist-active' : ''}`;
+        boton.innerHTML = esFiable ? '★' : '⭐';
+        boton.title = esFiable 
+            ? `Quitar "${nombreUsuario}" de usuarios fiables`
+            : `Añadir "${nombreUsuario}" a usuarios fiables`;
+        
+        boton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleWhitelist(nombreUsuario, boton, boton.closest('.fc-badge-container'));
+        });
+        
+        return boton;
+    }
+
+    function crearContenedorBadge(badge, botonWhitelist, nombreUsuario) {
+        const container = document.createElement('span');
+        container.className = 'fc-badge-container';
+        container.dataset.usuario = nombreUsuario.toLowerCase();
+        container.appendChild(badge);
+        container.appendChild(botonWhitelist);
+        return container;
     }
 
     function crearBadgeCargando(compacto = false) {
@@ -383,7 +512,8 @@
         
         const badgesCargando = [];
         for (const elemento of usuario.elementos) {
-            if (!elemento.nextSibling?.classList?.contains('fc-troll-badge')) {
+            if (!elemento.nextSibling?.classList?.contains('fc-badge-container') && 
+                !elemento.nextSibling?.classList?.contains('fc-troll-badge')) {
                 const loadingBadge = crearBadgeCargando();
                 elemento.parentNode.insertBefore(document.createTextNode(' '), elemento.nextSibling);
                 elemento.parentNode.insertBefore(loadingBadge, elemento.nextSibling?.nextSibling);
@@ -405,12 +535,15 @@
             const siguiente = elemento.nextSibling;
             if (siguiente?.nodeType === Node.TEXT_NODE) {
                 const ss = siguiente.nextSibling;
-                if (ss?.classList?.contains('fc-troll-badge')) continue;
+                if (ss?.classList?.contains('fc-badge-container') || ss?.classList?.contains('fc-troll-badge')) continue;
             }
             
-            const badge = crearBadge(probabilidad, datos, esElOP, esFiable);
+            const badge = crearBadge(probabilidad, datos, esElOP, esFiable, false, usuario.nombre);
+            const botonWL = crearBotonWhitelist(usuario.nombre, esFiable, false);
+            const container = crearContenedorBadge(badge, botonWL, usuario.nombre);
+            
             elemento.parentNode.insertBefore(document.createTextNode(' '), elemento.nextSibling);
-            elemento.parentNode.insertBefore(badge, elemento.nextSibling?.nextSibling);
+            elemento.parentNode.insertBefore(container, elemento.nextSibling?.nextSibling);
         }
     }
 
@@ -497,6 +630,11 @@
     async function procesarHiloEnListado(hilo) {
         const esFiable = esUsuarioFiable(hilo.opNombre);
         
+        // Verificar que no tenga ya un badge
+        if (hilo.tituloElement.nextSibling?.nextSibling?.classList?.contains('fc-badge-container')) {
+            return;
+        }
+        
         // Crear badge de carga junto al título
         const loadingBadge = crearBadgeCargando(true);
         hilo.tituloElement.parentNode.insertBefore(document.createTextNode(' '), hilo.tituloElement.nextSibling);
@@ -515,11 +653,16 @@
         if (!datos) return;
         
         const probabilidad = calcularProbabilidadTroll(datos.fechaRegistro, datos.hilos, datos.mensajes);
+        const nombreOP = opInfo.nombre || hilo.opNombre;
+        const esFiableActual = esUsuarioFiable(nombreOP);
         
-        // Crear badge junto al título del hilo
-        const badge = crearBadge(probabilidad, datos, true, esFiable, true);
+        // Crear badge y botón whitelist
+        const badge = crearBadge(probabilidad, datos, true, esFiableActual, true, nombreOP);
+        const botonWL = crearBotonWhitelist(nombreOP, esFiableActual, true);
+        const container = crearContenedorBadge(badge, botonWL, nombreOP);
+        
         hilo.tituloElement.parentNode.insertBefore(document.createTextNode(' '), hilo.tituloElement.nextSibling);
-        hilo.tituloElement.parentNode.insertBefore(badge, hilo.tituloElement.nextSibling?.nextSibling);
+        hilo.tituloElement.parentNode.insertBefore(container, hilo.tituloElement.nextSibling?.nextSibling);
     }
 
     async function ejecutarEnListado() {
