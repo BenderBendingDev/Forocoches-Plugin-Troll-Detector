@@ -1,0 +1,149 @@
+/**
+ * ForoCoches Troll Detector - Estilos
+ */
+
+/* Badge principal */
+.fc-troll-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    cursor: help;
+    transition: all 0.2s ease;
+    vertical-align: middle;
+    text-decoration: none !important;
+    line-height: 1.2;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+.fc-troll-badge:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+/* Nivel alto - Rojo */
+.fc-troll-badge.troll-alto {
+    background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+    color: #ffffff;
+    border: 1px solid #aa0000;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+}
+
+.fc-troll-badge.troll-alto:hover {
+    background: linear-gradient(135deg, #ff5555 0%, #dd0000 100%);
+}
+
+/* Nivel medio - Amarillo/Naranja */
+.fc-troll-badge.troll-medio {
+    background: linear-gradient(135deg, #ffcc00 0%, #ff9900 100%);
+    color: #1a1a1a;
+    border: 1px solid #cc7700;
+}
+
+.fc-troll-badge.troll-medio:hover {
+    background: linear-gradient(135deg, #ffdd33 0%, #ffaa00 100%);
+}
+
+/* Nivel bajo - Verde */
+.fc-troll-badge.troll-bajo {
+    background: linear-gradient(135deg, #00cc66 0%, #009944 100%);
+    color: #ffffff;
+    border: 1px solid #007733;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.15);
+}
+
+.fc-troll-badge.troll-bajo:hover {
+    background: linear-gradient(135deg, #00dd77 0%, #00aa55 100%);
+}
+
+/* Usuario Fiable (whitelist) - Azul especial */
+.fc-troll-badge.troll-fiable {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: #ffffff;
+    border: 1px solid #0099cc;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.15);
+    font-weight: 700;
+}
+
+.fc-troll-badge.troll-fiable:hover {
+    background: linear-gradient(135deg, #5fb8ff 0%, #33f5ff 100%);
+    box-shadow: 0 2px 8px rgba(79, 172, 254, 0.4);
+}
+
+/* Estado de carga */
+.fc-troll-badge.fc-troll-loading {
+    background: linear-gradient(135deg, #e0e0e0 0%, #c0c0c0 100%);
+    color: #666666;
+    border: 1px solid #aaaaaa;
+    animation: fc-pulse 1.5s infinite;
+}
+
+@keyframes fc-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+/* Tooltip mejorado (usando CSS puro como fallback) */
+.fc-troll-badge[title] {
+    position: relative;
+}
+
+/* Asegurar que el badge no rompe el diseño del foro */
+.fc-troll-badge * {
+    box-sizing: border-box;
+}
+
+/* Ajustes responsivos */
+@media (max-width: 768px) {
+    .fc-troll-badge {
+        font-size: 10px;
+        padding: 2px 6px;
+        margin-left: 4px;
+    }
+}
+
+/* Animación de entrada */
+@keyframes fc-badge-appear {
+    0% {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.fc-troll-badge:not(.fc-troll-loading) {
+    animation: fc-badge-appear 0.3s ease-out;
+}
+
+/* Contador de usuarios analizados (opcional para futuro) */
+.fc-troll-counter {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    z-index: 9999;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+/* Resaltar el badge del OP */
+.fc-troll-badge:has(+ .fc-op-indicator),
+.fc-troll-badge:contains('👑') {
+    font-weight: 700;
+}

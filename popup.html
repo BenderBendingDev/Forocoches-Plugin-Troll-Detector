@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FC Troll Detector - Configuración</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="popup-container">
+        <header class="popup-header">
+            <h1>🔍 FC Troll Detector</h1>
+            <p class="subtitle">Configuración</p>
+        </header>
+
+        <main class="popup-content">
+            <!-- Sección de Umbrales -->
+            <section class="config-section">
+                <h2>📊 Umbrales de Riesgo</h2>
+                
+                <div class="config-item">
+                    <label for="umbral-alto">
+                        🔴 Riesgo Alto (%)
+                        <span class="value-display" id="umbral-alto-value">70</span>
+                    </label>
+                    <input type="range" id="umbral-alto" min="50" max="95" value="70">
+                </div>
+
+                <div class="config-item">
+                    <label for="umbral-medio">
+                        🟡 Riesgo Medio (%)
+                        <span class="value-display" id="umbral-medio-value">40</span>
+                    </label>
+                    <input type="range" id="umbral-medio" min="20" max="60" value="40">
+                </div>
+            </section>
+
+            <!-- Sección de Pesos -->
+            <section class="config-section">
+                <h2>⚖️ Pesos del Algoritmo</h2>
+                
+                <div class="config-item">
+                    <label for="peso-antiguedad">
+                        📅 Antigüedad de cuenta
+                        <span class="value-display" id="peso-antiguedad-value">50%</span>
+                    </label>
+                    <input type="range" id="peso-antiguedad" min="0" max="100" value="50">
+                </div>
+
+                <div class="config-item">
+                    <label for="peso-actividad">
+                        📈 Actividad (msgs/día)
+                        <span class="value-display" id="peso-actividad-value">50%</span>
+                    </label>
+                    <input type="range" id="peso-actividad" min="0" max="100" value="50">
+                </div>
+
+                <p class="hint">Los pesos se normalizan automáticamente al 100%</p>
+            </section>
+
+            <!-- Sección de Usuarios Fiables -->
+            <section class="config-section">
+                <h2>✅ Usuarios Fiables</h2>
+                <p class="hint">Estos usuarios siempre aparecerán como fiables (verde)</p>
+                
+                <div class="add-user-form">
+                    <input type="text" id="nuevo-usuario" placeholder="Nombre de usuario...">
+                    <button id="btn-agregar-usuario" class="btn-add">➕</button>
+                </div>
+
+                <ul id="lista-usuarios-fiables" class="user-list">
+                    <!-- Se llena dinámicamente -->
+                </ul>
+
+                <p class="empty-message" id="sin-usuarios">No hay usuarios en la lista</p>
+            </section>
+
+            <!-- Sección de Opciones -->
+            <section class="config-section">
+                <h2>⚙️ Opciones</h2>
+                
+                <div class="config-item checkbox-item">
+                    <label>
+                        <input type="checkbox" id="mostrar-tooltip">
+                        Mostrar tooltip detallado
+                    </label>
+                </div>
+
+                <div class="config-item checkbox-item">
+                    <label>
+                        <input type="checkbox" id="analizar-auto">
+                        Analizar automáticamente al cargar
+                    </label>
+                </div>
+            </section>
+        </main>
+
+        <footer class="popup-footer">
+            <button id="btn-reset" class="btn-secondary">🔄 Restaurar</button>
+            <button id="btn-guardar" class="btn-primary">💾 Guardar</button>
+        </footer>
+
+        <div class="status-message" id="status-message"></div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,326 @@
+/**
+ * FC Troll Detector - Popup Styles
+ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    font-size: 14px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #e0e0e0;
+    min-width: 320px;
+    max-width: 360px;
+}
+
+.popup-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+/* Header */
+.popup-header {
+    background: linear-gradient(135deg, #0f3460 0%, #1a1a2e 100%);
+    padding: 16px 20px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.popup-header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+}
+
+.popup-header .subtitle {
+    font-size: 12px;
+    color: #8892b0;
+}
+
+/* Main Content */
+.popup-content {
+    padding: 12px 16px;
+    flex: 1;
+    overflow-y: auto;
+    max-height: 400px;
+}
+
+/* Sections */
+.config-section {
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(255,255,255,0.05);
+}
+
+.config-section h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64ffda;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Config Items */
+.config-item {
+    margin-bottom: 14px;
+}
+
+.config-item:last-child {
+    margin-bottom: 0;
+}
+
+.config-item label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #ccd6f6;
+    margin-bottom: 6px;
+}
+
+.value-display {
+    background: rgba(100, 255, 218, 0.1);
+    color: #64ffda;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 36px;
+    text-align: center;
+}
+
+/* Range Inputs */
+input[type="range"] {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    outline: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: linear-gradient(135deg, #64ffda 0%, #00bfa5 100%);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(100, 255, 218, 0.3);
+    transition: transform 0.2s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+/* Checkbox Items */
+.checkbox-item label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    justify-content: flex-start;
+}
+
+.checkbox-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #64ffda;
+    cursor: pointer;
+}
+
+/* Hints */
+.hint {
+    font-size: 11px;
+    color: #8892b0;
+    font-style: italic;
+    margin-top: 8px;
+}
+
+/* User List */
+.add-user-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.add-user-form input[type="text"] {
+    flex: 1;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.add-user-form input[type="text"]:focus {
+    border-color: #64ffda;
+}
+
+.add-user-form input[type="text"]::placeholder {
+    color: #8892b0;
+}
+
+.btn-add {
+    background: linear-gradient(135deg, #64ffda 0%, #00bfa5 100%);
+    border: none;
+    border-radius: 6px;
+    width: 36px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+.btn-add:hover {
+    transform: scale(1.05);
+}
+
+.btn-add:active {
+    opacity: 0.8;
+}
+
+/* User List */
+.user-list {
+    list-style: none;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.user-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    background: rgba(100, 255, 218, 0.05);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 12px;
+}
+
+.user-list li:last-child {
+    margin-bottom: 0;
+}
+
+.user-list .user-name {
+    color: #64ffda;
+    font-weight: 500;
+}
+
+.user-list .btn-remove {
+    background: rgba(255, 68, 68, 0.2);
+    border: none;
+    color: #ff6b6b;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10px;
+    transition: background 0.2s;
+}
+
+.user-list .btn-remove:hover {
+    background: rgba(255, 68, 68, 0.4);
+}
+
+.empty-message {
+    text-align: center;
+    color: #8892b0;
+    font-size: 11px;
+    font-style: italic;
+    padding: 10px;
+}
+
+/* Footer */
+.popup-footer {
+    display: flex;
+    gap: 10px;
+    padding: 12px 16px;
+    background: rgba(0,0,0,0.2);
+    border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.popup-footer button {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+.popup-footer button:hover {
+    transform: translateY(-1px);
+}
+
+.popup-footer button:active {
+    opacity: 0.8;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #64ffda 0%, #00bfa5 100%);
+    color: #1a1a2e;
+}
+
+.btn-secondary {
+    background: rgba(255,255,255,0.1);
+    color: #ccd6f6;
+}
+
+.btn-secondary:hover {
+    background: rgba(255,255,255,0.15);
+}
+
+/* Status Message */
+.status-message {
+    position: fixed;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #64ffda;
+    color: #1a1a2e;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+}
+
+.status-message.show {
+    opacity: 1;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(100, 255, 218, 0.3);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 255, 218, 0.5);
+}
