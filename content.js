@@ -30,9 +30,10 @@
         DELAY_ENTRE_PETICIONES: 50,
         MAX_USUARIOS_POR_PAGINA: 50,
         MAX_HILOS_POR_PAGINA: 40,
-        CONCURRENCIA_LISTADO: 6,  // Peticiones simultáneas en listado
-        CONCURRENCIA_HILO: 4,     // Peticiones simultáneas en hilo
+        CONCURRENCIA_LISTADO: 6,
+        CONCURRENCIA_HILO: 4,
         USUARIOS_FIABLES: [],
+        USUARIOS_BLACKLIST: [],
         MOSTRAR_TOOLTIP: true,
         ANALIZAR_AUTO: true
     };
@@ -62,6 +63,7 @@
                 CONFIG.PESO_ANTIGUEDAD = (c.pesoAntiguedad || 50) / 100;
                 CONFIG.PESO_ACTIVIDAD = (c.pesoActividad || 50) / 100;
                 CONFIG.USUARIOS_FIABLES = (c.usuariosFiables || []).map(u => u.toLowerCase());
+                CONFIG.USUARIOS_BLACKLIST = (c.usuariosBlacklist || []).map(u => u.toLowerCase());
                 CONFIG.MOSTRAR_TOOLTIP = c.mostrarTooltip !== false;
                 CONFIG.ANALIZAR_AUTO = c.analizarAuto !== false;
             }
@@ -80,6 +82,10 @@
 
     function esUsuarioFiable(nombreUsuario) {
         return CONFIG.USUARIOS_FIABLES.includes(nombreUsuario.toLowerCase());
+    }
+
+    function esUsuarioBlacklist(nombreUsuario) {
+        return CONFIG.USUARIOS_BLACKLIST.includes(nombreUsuario.toLowerCase());
     }
 
     function parsearFechaFC(fechaStr) {
@@ -175,11 +181,16 @@
         return { nivel: 'bajo', emoji: '🟢', clase: 'troll-bajo' };
     }
 
-    // ==================== WHITELIST ====================
+    // ==================== WHITELIST & BLACKLIST ====================
 
     async function toggleWhitelist(nombreUsuario, boton, badgeContainer) {
         const nombreLower = nombreUsuario.toLowerCase();
         const estaEnWhitelist = CONFIG.USUARIOS_FIABLES.includes(nombreLower);
+        
+        // Si está en blacklist, quitarlo primero
+        if (CONFIG.USUARIOS_BLACKLIST.includes(nombreLower)) {
+            await quitarDeBlacklist(nombreUsuario);
+        }
         
         try {
             const result = await chrome.storage.sync.get('fcTrollConfig');
@@ -187,7 +198,6 @@
             let lista = config.usuariosFiables || [];
             
             if (estaEnWhitelist) {
-                // Quitar de whitelist
                 lista = lista.filter(u => u.toLowerCase() !== nombreLower);
                 CONFIG.USUARIOS_FIABLES = CONFIG.USUARIOS_FIABLES.filter(u => u !== nombreLower);
                 boton.innerHTML = '⭐';
@@ -195,7 +205,6 @@
                 boton.classList.remove('fc-whitelist-active');
                 mostrarNotificacion(`❌ "${nombreUsuario}" quitado de fiables`);
             } else {
-                // Añadir a whitelist
                 lista.push(nombreUsuario);
                 CONFIG.USUARIOS_FIABLES.push(nombreLower);
                 boton.innerHTML = '★';
@@ -206,14 +215,110 @@
             
             config.usuariosFiables = lista;
             await chrome.storage.sync.set({ fcTrollConfig: config });
-            
-            // Actualizar todos los badges de este usuario en la página
             actualizarBadgesUsuario(nombreUsuario);
             
         } catch (error) {
             console.error('FC Troll Detector: Error actualizando whitelist:', error);
             mostrarNotificacion('❌ Error al actualizar', true);
         }
+    }
+
+    async function toggleBlacklist(nombreUsuario, boton) {
+        const nombreLower = nombreUsuario.toLowerCase();
+        const estaEnBlacklist = CONFIG.USUARIOS_BLACKLIST.includes(nombreLower);
+        
+        // Si está en whitelist, quitarlo primero
+        if (CONFIG.USUARIOS_FIABLES.includes(nombreLower)) {
+            await quitarDeWhitelist(nombreUsuario);
+        }
+        
+        try {
+            const result = await chrome.storage.sync.get('fcTrollConfig');
+            const config = result.fcTrollConfig || {};
+            let lista = config.usuariosBlacklist || [];
+            
+            if (estaEnBlacklist) {
+                lista = lista.filter(u => u.toLowerCase() !== nombreLower);
+                CONFIG.USUARIOS_BLACKLIST = CONFIG.USUARIOS_BLACKLIST.filter(u => u !== nombreLower);
+                boton.innerHTML = '🚫';
+                boton.title = `Marcar "${nombreUsuario}" como troll`;
+                boton.classList.remove('fc-blacklist-active');
+                mostrarNotificacion(`✅ "${nombreUsuario}" quitado de trolls`);
+            } else {
+                lista.push(nombreUsuario);
+                CONFIG.USUARIOS_BLACKLIST.push(nombreLower);
+                boton.innerHTML = '🚫';
+                boton.title = `Quitar "${nombreUsuario}" de trolls`;
+                boton.classList.add('fc-blacklist-active');
+                mostrarNotificacion(`🚫 "${nombreUsuario}" marcado como troll`);
+            }
+            
+            config.usuariosBlacklist = lista;
+            await chrome.storage.sync.set({ fcTrollConfig: config });
+            actualizarBadgesUsuario(nombreUsuario);
+            resaltarContenidoTroll(nombreUsuario);
+            
+        } catch (error) {
+            console.error('FC Troll Detector: Error actualizando blacklist:', error);
+            mostrarNotificacion('❌ Error al actualizar', true);
+        }
+    }
+
+    async function quitarDeWhitelist(nombreUsuario) {
+        const nombreLower = nombreUsuario.toLowerCase();
+        const result = await chrome.storage.sync.get('fcTrollConfig');
+        const config = result.fcTrollConfig || {};
+        config.usuariosFiables = (config.usuariosFiables || []).filter(u => u.toLowerCase() !== nombreLower);
+        CONFIG.USUARIOS_FIABLES = CONFIG.USUARIOS_FIABLES.filter(u => u !== nombreLower);
+        await chrome.storage.sync.set({ fcTrollConfig: config });
+    }
+
+    async function quitarDeBlacklist(nombreUsuario) {
+        const nombreLower = nombreUsuario.toLowerCase();
+        const result = await chrome.storage.sync.get('fcTrollConfig');
+        const config = result.fcTrollConfig || {};
+        config.usuariosBlacklist = (config.usuariosBlacklist || []).filter(u => u.toLowerCase() !== nombreLower);
+        CONFIG.USUARIOS_BLACKLIST = CONFIG.USUARIOS_BLACKLIST.filter(u => u !== nombreLower);
+        await chrome.storage.sync.set({ fcTrollConfig: config });
+    }
+
+    function resaltarContenidoTroll(nombreUsuario) {
+        const esTroll = esUsuarioBlacklist(nombreUsuario);
+        
+        // Resaltar posts del usuario en hilos
+        const enlaces = document.querySelectorAll('a[href*="member.php?u="]');
+        enlaces.forEach(enlace => {
+            if (enlace.textContent.trim().toLowerCase() === nombreUsuario.toLowerCase()) {
+                // Buscar el contenedor del post
+                let postContainer = enlace.closest('[class*="post"]') || 
+                                   enlace.closest('table')?.closest('div') ||
+                                   enlace.closest('div')?.parentElement?.parentElement;
+                
+                if (postContainer) {
+                    if (esTroll) {
+                        postContainer.classList.add('fc-troll-post');
+                    } else {
+                        postContainer.classList.remove('fc-troll-post');
+                    }
+                }
+            }
+        });
+        
+        // Resaltar hilos en listado
+        const containers = document.querySelectorAll('.fc-badge-container');
+        containers.forEach(container => {
+            if (container.dataset.usuario === nombreUsuario.toLowerCase()) {
+                const hiloContainer = container.closest('[class*="thread"]') ||
+                                     container.closest('div')?.parentElement;
+                if (hiloContainer) {
+                    if (esTroll) {
+                        hiloContainer.classList.add('fc-troll-hilo');
+                    } else {
+                        hiloContainer.classList.remove('fc-troll-hilo');
+                    }
+                }
+            }
+        });
     }
 
     function mostrarNotificacion(mensaje, esError = false) {
@@ -238,11 +343,13 @@
 
     function actualizarBadgesUsuario(nombreUsuario) {
         const esFiable = esUsuarioFiable(nombreUsuario);
+        const esTroll = esUsuarioBlacklist(nombreUsuario);
         const badges = document.querySelectorAll(`[data-usuario="${nombreUsuario.toLowerCase()}"]`);
         
         badges.forEach(container => {
             const badge = container.querySelector('.fc-troll-badge');
-            const boton = container.querySelector('.fc-whitelist-btn');
+            const botonWL = container.querySelector('.fc-whitelist-btn');
+            const botonBL = container.querySelector('.fc-blacklist-btn');
             
             if (badge && !badge.classList.contains('fc-troll-loading')) {
                 const probabilidad = parseInt(badge.dataset.probabilidad) || 0;
@@ -250,9 +357,12 @@
                 const compacto = badge.classList.contains('fc-badge-compact');
                 
                 // Actualizar clase del badge
-                badge.classList.remove('troll-alto', 'troll-medio', 'troll-bajo', 'troll-fiable');
+                badge.classList.remove('troll-alto', 'troll-medio', 'troll-bajo', 'troll-fiable', 'troll-blacklist');
                 
-                if (esFiable) {
+                if (esTroll) {
+                    badge.classList.add('troll-blacklist');
+                    badge.innerHTML = compacto ? '🚫' : `🚫 Troll${esOP ? ' 👑' : ''}`;
+                } else if (esFiable) {
                     badge.classList.add('troll-fiable');
                     badge.innerHTML = compacto ? '✅' : `✅ Fiable${esOP ? ' 👑' : ''}`;
                 } else {
@@ -262,26 +372,43 @@
                 }
             }
             
-            if (boton) {
+            // Actualizar botón whitelist
+            if (botonWL) {
                 if (esFiable) {
-                    boton.innerHTML = '★';
-                    boton.classList.add('fc-whitelist-active');
-                    boton.title = `Quitar "${nombreUsuario}" de usuarios fiables`;
+                    botonWL.innerHTML = '★';
+                    botonWL.classList.add('fc-whitelist-active');
+                    botonWL.title = `Quitar "${nombreUsuario}" de usuarios fiables`;
                 } else {
-                    boton.innerHTML = '⭐';
-                    boton.classList.remove('fc-whitelist-active');
-                    boton.title = `Añadir "${nombreUsuario}" a usuarios fiables`;
+                    botonWL.innerHTML = '⭐';
+                    botonWL.classList.remove('fc-whitelist-active');
+                    botonWL.title = `Añadir "${nombreUsuario}" a usuarios fiables`;
+                }
+            }
+            
+            // Actualizar botón blacklist
+            if (botonBL) {
+                if (esTroll) {
+                    botonBL.classList.add('fc-blacklist-active');
+                    botonBL.title = `Quitar "${nombreUsuario}" de trolls`;
+                } else {
+                    botonBL.classList.remove('fc-blacklist-active');
+                    botonBL.title = `Marcar "${nombreUsuario}" como troll`;
                 }
             }
         });
+        
+        // Resaltar/quitar resaltado de contenido
+        resaltarContenidoTroll(nombreUsuario);
     }
 
     // ==================== BADGES ====================
 
-    function crearBadge(probabilidad, datos, esOP = false, esFiable = false, compacto = false, nombreUsuario = '') {
+    function crearBadge(probabilidad, datos, esOP = false, esFiable = false, esTroll = false, compacto = false, nombreUsuario = '') {
         let riesgo;
         
-        if (esFiable) {
+        if (esTroll) {
+            riesgo = { nivel: 'blacklist', emoji: '🚫', clase: 'troll-blacklist' };
+        } else if (esFiable) {
             riesgo = { nivel: 'fiable', emoji: '✅', clase: 'troll-fiable' };
         } else {
             riesgo = getNivelRiesgo(probabilidad);
@@ -294,7 +421,9 @@
         
         const opIndicator = esOP ? ' 👑' : '';
         
-        if (esFiable) {
+        if (esTroll) {
+            badge.innerHTML = compacto ? '🚫' : `${riesgo.emoji} Troll${opIndicator}`;
+        } else if (esFiable) {
             badge.innerHTML = compacto ? '✅' : `${riesgo.emoji} Fiable${opIndicator}`;
         } else {
             badge.innerHTML = `${riesgo.emoji} ${probabilidad}%${opIndicator}`;
@@ -302,8 +431,11 @@
         
         if (CONFIG.MOSTRAR_TOOLTIP && datos) {
             const tipoUsuario = esOP ? '(OP) ' : '';
-            const fiableText = esFiable ? '⭐ USUARIO FIABLE\n' : '';
-            badge.title = `${fiableText}🎯 ${tipoUsuario}Probabilidad Troll: ${probabilidad}%\n` +
+            let statusText = '';
+            if (esTroll) statusText = '🚫 MARCADO COMO TROLL\n';
+            else if (esFiable) statusText = '⭐ USUARIO FIABLE\n';
+            
+            badge.title = `${statusText}🎯 ${tipoUsuario}Probabilidad Troll: ${probabilidad}%\n` +
                          `📅 Registro: ${datos.fechaRegistroStr}\n` +
                          `📝 Hilos: ${datos.hilos}\n` +
                          `💬 Mensajes: ${datos.mensajes}\n` +
@@ -331,12 +463,30 @@
         return boton;
     }
 
-    function crearContenedorBadge(badge, botonWhitelist, nombreUsuario) {
+    function crearBotonBlacklist(nombreUsuario, esTroll, compacto = false) {
+        const boton = document.createElement('button');
+        boton.className = `fc-blacklist-btn${compacto ? ' fc-btn-compact' : ''}${esTroll ? ' fc-blacklist-active' : ''}`;
+        boton.innerHTML = '🚫';
+        boton.title = esTroll 
+            ? `Quitar "${nombreUsuario}" de trolls`
+            : `Marcar "${nombreUsuario}" como troll`;
+        
+        boton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleBlacklist(nombreUsuario, boton);
+        });
+        
+        return boton;
+    }
+
+    function crearContenedorBadge(badge, botonWhitelist, botonBlacklist, nombreUsuario) {
         const container = document.createElement('span');
         container.className = 'fc-badge-container';
         container.dataset.usuario = nombreUsuario.toLowerCase();
         container.appendChild(badge);
         container.appendChild(botonWhitelist);
+        container.appendChild(botonBlacklist);
         return container;
     }
 
@@ -509,6 +659,7 @@
 
     async function procesarUsuarioEnHilo(usuario, esElOP) {
         const esFiable = esUsuarioFiable(usuario.nombre);
+        const esTroll = esUsuarioBlacklist(usuario.nombre);
         
         const badgesCargando = [];
         for (const elemento of usuario.elementos) {
@@ -538,12 +689,23 @@
                 if (ss?.classList?.contains('fc-badge-container') || ss?.classList?.contains('fc-troll-badge')) continue;
             }
             
-            const badge = crearBadge(probabilidad, datos, esElOP, esFiable, false, usuario.nombre);
+            const badge = crearBadge(probabilidad, datos, esElOP, esFiable, esTroll, false, usuario.nombre);
             const botonWL = crearBotonWhitelist(usuario.nombre, esFiable, false);
-            const container = crearContenedorBadge(badge, botonWL, usuario.nombre);
+            const botonBL = crearBotonBlacklist(usuario.nombre, esTroll, false);
+            const container = crearContenedorBadge(badge, botonWL, botonBL, usuario.nombre);
             
             elemento.parentNode.insertBefore(document.createTextNode(' '), elemento.nextSibling);
             elemento.parentNode.insertBefore(container, elemento.nextSibling?.nextSibling);
+            
+            // Resaltar post si es troll
+            if (esTroll) {
+                const postContainer = elemento.closest('[class*="post"]') || 
+                                     elemento.closest('table')?.closest('div') ||
+                                     elemento.closest('div')?.parentElement?.parentElement;
+                if (postContainer) {
+                    postContainer.classList.add('fc-troll-post');
+                }
+            }
         }
     }
 
@@ -628,8 +790,6 @@
     }
 
     async function procesarHiloEnListado(hilo) {
-        const esFiable = esUsuarioFiable(hilo.opNombre);
-        
         // Verificar que no tenga ya un badge
         if (hilo.tituloElement.nextSibling?.nextSibling?.classList?.contains('fc-badge-container')) {
             return;
@@ -654,15 +814,26 @@
         
         const probabilidad = calcularProbabilidadTroll(datos.fechaRegistro, datos.hilos, datos.mensajes);
         const nombreOP = opInfo.nombre || hilo.opNombre;
-        const esFiableActual = esUsuarioFiable(nombreOP);
+        const esFiable = esUsuarioFiable(nombreOP);
+        const esTroll = esUsuarioBlacklist(nombreOP);
         
-        // Crear badge y botón whitelist
-        const badge = crearBadge(probabilidad, datos, true, esFiableActual, true, nombreOP);
-        const botonWL = crearBotonWhitelist(nombreOP, esFiableActual, true);
-        const container = crearContenedorBadge(badge, botonWL, nombreOP);
+        // Crear badge y botones
+        const badge = crearBadge(probabilidad, datos, true, esFiable, esTroll, true, nombreOP);
+        const botonWL = crearBotonWhitelist(nombreOP, esFiable, true);
+        const botonBL = crearBotonBlacklist(nombreOP, esTroll, true);
+        const container = crearContenedorBadge(badge, botonWL, botonBL, nombreOP);
         
         hilo.tituloElement.parentNode.insertBefore(document.createTextNode(' '), hilo.tituloElement.nextSibling);
         hilo.tituloElement.parentNode.insertBefore(container, hilo.tituloElement.nextSibling?.nextSibling);
+        
+        // Resaltar hilo si el OP es troll
+        if (esTroll) {
+            const hiloContainer = hilo.tituloElement.closest('[class*="thread"]') ||
+                                 hilo.tituloElement.closest('div')?.parentElement;
+            if (hiloContainer) {
+                hiloContainer.classList.add('fc-troll-hilo');
+            }
+        }
     }
 
     async function ejecutarEnListado() {

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "FC Troll Detector (No oficial)",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Proyecto independiente sin ánimo de lucro. Detecta la probabilidad de troll basándose en datos públicos de actividad y registro. No afiliado a ForoCoches.",
   "permissions": [
     "storage"

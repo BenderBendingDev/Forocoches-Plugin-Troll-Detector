@@ -75,6 +75,30 @@
     box-shadow: 0 2px 8px rgba(79, 172, 254, 0.4);
 }
 
+/* Usuario Blacklist (troll marcado) - Negro/Rojo */
+.fc-troll-badge.troll-blacklist {
+    background: linear-gradient(135deg, #1a1a1a 0%, #333333 100%);
+    color: #ff4444;
+    border: 2px solid #ff0000;
+    text-shadow: 0 0 8px rgba(255, 0, 0, 0.5);
+    font-weight: 700;
+    animation: fc-troll-pulse 2s infinite;
+}
+
+.fc-troll-badge.troll-blacklist:hover {
+    background: linear-gradient(135deg, #2a2a2a 0%, #444444 100%);
+    box-shadow: 0 2px 12px rgba(255, 0, 0, 0.5);
+}
+
+@keyframes fc-troll-pulse {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(255, 0, 0, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
+    }
+}
+
 /* Estado de carga */
 .fc-troll-badge.fc-troll-loading {
     background: linear-gradient(135deg, #e0e0e0 0%, #c0c0c0 100%);
@@ -169,10 +193,96 @@
 }
 
 /* Botón compacto para listado */
-.fc-whitelist-btn.fc-btn-compact {
+.fc-whitelist-btn.fc-btn-compact,
+.fc-blacklist-btn.fc-btn-compact {
     width: 14px;
     height: 14px;
     font-size: 8px;
+}
+
+/* Botón de Blacklist */
+.fc-blacklist-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(128, 128, 128, 0.2);
+    color: #888;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0.6;
+}
+
+.fc-blacklist-btn:hover {
+    opacity: 1;
+    background: rgba(255, 0, 0, 0.2);
+    color: #ff4444;
+    transform: scale(1.1);
+}
+
+.fc-blacklist-btn.fc-blacklist-active {
+    opacity: 1;
+    background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+    color: #ffffff;
+    animation: fc-btn-pulse 2s infinite;
+}
+
+.fc-blacklist-btn.fc-blacklist-active:hover {
+    background: linear-gradient(135deg, #ff3333 0%, #dd0000 100%);
+}
+
+@keyframes fc-btn-pulse {
+    0%, 100% {
+        box-shadow: 0 0 3px rgba(255, 0, 0, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 8px rgba(255, 0, 0, 0.8);
+    }
+}
+
+/* Resaltado de posts de trolls */
+.fc-troll-post {
+    position: relative;
+    background: rgba(255, 0, 0, 0.05) !important;
+    border-left: 4px solid #ff0000 !important;
+    box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.1);
+}
+
+.fc-troll-post::before {
+    content: '⚠️ TROLL';
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    z-index: 100;
+    box-shadow: 0 2px 6px rgba(255, 0, 0, 0.3);
+}
+
+/* Resaltado de hilos de trolls en listado */
+.fc-troll-hilo {
+    position: relative;
+    background: rgba(255, 0, 0, 0.08) !important;
+    border-left: 3px solid #ff0000 !important;
+}
+
+.fc-troll-hilo::after {
+    content: '⚠️';
+    position: absolute;
+    left: -25px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
 }
 
 /* Notificación */

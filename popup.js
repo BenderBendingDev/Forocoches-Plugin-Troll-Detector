@@ -10,6 +10,7 @@ const CONFIG_DEFAULT = {
     pesoAntiguedad: 50,
     pesoActividad: 50,
     usuariosFiables: [],
+    usuariosBlacklist: [],
     mostrarTooltip: true,
     analizarAuto: true
 };
@@ -35,6 +36,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnAgregarUsuario: document.getElementById('btn-agregar-usuario'),
         listaUsuariosFiables: document.getElementById('lista-usuarios-fiables'),
         sinUsuarios: document.getElementById('sin-usuarios'),
+        nuevoTroll: document.getElementById('nuevo-troll'),
+        btnAgregarTroll: document.getElementById('btn-agregar-troll'),
+        listaUsuariosBlacklist: document.getElementById('lista-usuarios-blacklist'),
+        sinTrolls: document.getElementById('sin-trolls'),
         mostrarTooltip: document.getElementById('mostrar-tooltip'),
         analizarAuto: document.getElementById('analizar-auto'),
         btnReset: document.getElementById('btn-reset'),
@@ -76,6 +81,9 @@ async function cargarConfiguracion() {
         // Renderizar lista de usuarios fiables
         renderizarUsuariosFiables(config.usuariosFiables || []);
         
+        // Renderizar lista de usuarios blacklist
+        renderizarUsuariosBlacklist(config.usuariosBlacklist || []);
+        
     } catch (error) {
         console.error('Error cargando configuración:', error);
         mostrarMensaje('Error al cargar configuración', true);
@@ -93,6 +101,7 @@ async function guardarConfiguracion() {
             pesoAntiguedad: parseInt(elementos.pesoAntiguedad.value),
             pesoActividad: parseInt(elementos.pesoActividad.value),
             usuariosFiables: obtenerUsuariosFiables(),
+            usuariosBlacklist: obtenerUsuariosBlacklist(),
             mostrarTooltip: elementos.mostrarTooltip.checked,
             analizarAuto: elementos.analizarAuto.checked
         };
@@ -136,6 +145,7 @@ async function restaurarConfiguracion() {
     elementos.analizarAuto.checked = CONFIG_DEFAULT.analizarAuto;
     
     renderizarUsuariosFiables([]);
+    renderizarUsuariosBlacklist([]);
     
     mostrarMensaje('Valores restaurados');
 }
@@ -183,6 +193,14 @@ function configurarEventListeners() {
     elementos.nuevoUsuario.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             agregarUsuarioFiable();
+        }
+    });
+    
+    // Agregar usuario a blacklist
+    elementos.btnAgregarTroll.addEventListener('click', agregarUsuarioBlacklist);
+    elementos.nuevoTroll.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            agregarUsuarioBlacklist();
         }
     });
     
@@ -254,6 +272,79 @@ function renderizarUsuariosFiables(usuarios) {
         });
         
         elementos.listaUsuariosFiables.appendChild(li);
+    }
+}
+
+/**
+ * Agrega un usuario a la blacklist
+ */
+function agregarUsuarioBlacklist() {
+    const nombre = elementos.nuevoTroll.value.trim();
+    if (!nombre) return;
+    
+    const usuariosActuales = obtenerUsuariosBlacklist();
+    
+    // Verificar que no exista ya
+    if (usuariosActuales.some(u => u.toLowerCase() === nombre.toLowerCase())) {
+        mostrarMensaje('Usuario ya existe', true);
+        return;
+    }
+    
+    // Verificar que no esté en la whitelist
+    const usuariosFiables = obtenerUsuariosFiables();
+    if (usuariosFiables.some(u => u.toLowerCase() === nombre.toLowerCase())) {
+        mostrarMensaje('Usuario está en fiables', true);
+        return;
+    }
+    
+    usuariosActuales.push(nombre);
+    renderizarUsuariosBlacklist(usuariosActuales);
+    elementos.nuevoTroll.value = '';
+    mostrarMensaje('🚫 Troll añadido');
+}
+
+/**
+ * Elimina un usuario de la blacklist
+ */
+function eliminarUsuarioBlacklist(nombre) {
+    const usuariosActuales = obtenerUsuariosBlacklist();
+    const nuevaLista = usuariosActuales.filter(u => u !== nombre);
+    renderizarUsuariosBlacklist(nuevaLista);
+}
+
+/**
+ * Obtiene la lista actual de usuarios en blacklist del DOM
+ */
+function obtenerUsuariosBlacklist() {
+    const items = elementos.listaUsuariosBlacklist.querySelectorAll('li');
+    return Array.from(items).map(li => li.querySelector('.user-name').textContent);
+}
+
+/**
+ * Renderiza la lista de usuarios en blacklist
+ */
+function renderizarUsuariosBlacklist(usuarios) {
+    elementos.listaUsuariosBlacklist.innerHTML = '';
+    
+    if (usuarios.length === 0) {
+        elementos.sinTrolls.style.display = 'block';
+        return;
+    }
+    
+    elementos.sinTrolls.style.display = 'none';
+    
+    for (const usuario of usuarios) {
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <span class="user-name">${escapeHtml(usuario)}</span>
+            <button class="btn-remove btn-remove-troll" data-usuario="${escapeHtml(usuario)}">✕ Quitar</button>
+        `;
+        
+        li.querySelector('.btn-remove').addEventListener('click', (e) => {
+            eliminarUsuarioBlacklist(e.target.dataset.usuario);
+        });
+        
+        elementos.listaUsuariosBlacklist.appendChild(li);
     }
 }
 

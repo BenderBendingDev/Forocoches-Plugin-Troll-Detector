@@ -324,3 +324,35 @@ input[type="range"]::-webkit-slider-thumb:hover {
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(100, 255, 218, 0.5);
 }
+
+/* Estilos para sección Blacklist */
+.blacklist-section h2 {
+    color: #ff6b6b;
+    border-bottom-color: rgba(255, 107, 107, 0.2);
+}
+
+.user-list.blacklist li {
+    background: rgba(255, 68, 68, 0.1);
+    border-left: 3px solid #ff4444;
+}
+
+.user-list.blacklist .user-name {
+    color: #ff6b6b;
+}
+
+.btn-add-troll {
+    background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%) !important;
+}
+
+.btn-add-troll:hover {
+    background: linear-gradient(135deg, #ff5555 0%, #dd1111 100%) !important;
+}
+
+.btn-remove-troll {
+    background: rgba(255, 0, 0, 0.3) !important;
+    color: #ff4444 !important;
+}
+
+.btn-remove-troll:hover {
+    background: rgba(255, 0, 0, 0.5) !important;
+}

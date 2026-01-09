@@ -9,10 +9,13 @@ Extensión de Chrome para detectar la probabilidad de que los usuarios de ForoCo
   - 💬 **En hilos**: Analiza a todos los usuarios que participan
 - **Badge visual**: Muestra junto a cada nickname un indicador con la probabilidad de troll
 - **Indicador de OP**: El creador del hilo aparece con una 👑 corona
-- **Panel de configuración**: Personaliza umbrales, pesos y gestiona usuarios fiables
+- **Panel de configuración**: Personaliza umbrales, pesos y gestiona listas de usuarios
 - **Lista de usuarios fiables**: Marca usuarios de confianza que siempre aparecerán en azul
+- **Lista de trolls (Blacklist)**: Marca usuarios como trolls para resaltarlos en rojo
+- **Resaltado visual de trolls**: Los posts y hilos de usuarios marcados se resaltan en rojo
 - **Caché inteligente**: Guarda datos durante 24h para mayor velocidad
 - **Código de colores**:
+  - 🚫 **Negro/Rojo** - Usuario marcado como troll (blacklist)
   - ✅ **Azul** - Usuario marcado como fiable (whitelist)
   - 🟢 **Verde** (0-39%) - Baja probabilidad - Usuario probablemente legítimo
   - 🟡 **Amarillo** (40-69%) - Probabilidad media - Precaución
@@ -28,6 +31,7 @@ Extensión de Chrome para detectar la probabilidad de que los usuarios de ForoCo
 4. Sabrás de un vistazo si el creador del hilo es sospechoso
 
 ```
+🚫     ESTE HILO ES MENTIRA [RESALTADO ROJO] ← OP en tu blacklist (troll)
 🔴 75% En dos semanas voy a Bratislava...    ← OP sospechoso
 🟢 12% Peña Real Oviedo Vol. LVII            ← OP veterano
 🟡 45% Sorteo 5 invis by the face            ← OP con precaución
@@ -43,6 +47,7 @@ Extensión de Chrome para detectar la probabilidad de que los usuarios de ForoCo
 5. Pasa el ratón sobre cualquier badge para ver detalles
 
 ```
+TrollConocido 🚫 Troll ← Usuario en tu blacklist (post resaltado en rojo)
 Putérnico 🔴 75% 👑    ← OP del hilo con alta probabilidad
 AspirinaC ✅ Fiable    ← Usuario en tu whitelist
 Veterano 🟢 15%        ← Usuario veterano con baja probabilidad
@@ -70,6 +75,13 @@ Haz clic en el **icono de la extensión** para abrir el panel de configuración:
 ### ✅ Usuarios Fiables (Whitelist)
 - Añade usuarios que consideres de confianza
 - Estos usuarios siempre aparecerán con badge azul `✅ Fiable`
+- Se sincronizan con tu cuenta de Chrome
+
+### 🚫 Trolls Marcados (Blacklist)
+- Marca usuarios como trolls conocidos
+- Estos usuarios aparecerán con badge negro/rojo `🚫 Troll`
+- Sus posts y hilos se resaltarán visualmente en rojo
+- Aparece un indicador `⚠️ TROLL` sobre sus mensajes
 - Se sincronizan con tu cuenta de Chrome
 
 ### ⚙️ Opciones adicionales
@@ -125,12 +137,12 @@ Después de hacer cambios en los archivos:
 
 ```
 Plugin/
-├── manifest.json      # Configuración de la extensión (v1.2.0)
+├── manifest.json      # Configuración de la extensión (v1.4.0)
 ├── content.js         # Script principal (detecta listado vs hilo)
-├── styles.css         # Estilos de los badges (normal y compacto)
+├── styles.css         # Estilos de badges, blacklist y resaltados
 ├── popup.html         # Panel de configuración
-├── popup.css          # Estilos del panel
-├── popup.js           # Lógica del panel
+├── popup.css          # Estilos del panel (incluye blacklist)
+├── popup.js           # Lógica del panel (whitelist + blacklist)
 ├── icons/             # Iconos de la extensión
 │   └── icon.svg       # Icono fuente
 ├── LICENSE            # Licencia MIT
@@ -180,6 +192,19 @@ El algoritmo es una herramienta orientativa basada en estadísticas públicas. U
 ¿Ideas para mejorar el algoritmo? ¿Bugs? ¡Las contribuciones son bienvenidas!
 
 ## 📋 Changelog
+
+### v1.4.0
+- ✨ **Sistema de Blacklist**: Marca usuarios como trolls conocidos
+- ✨ **Resaltado visual**: Posts e hilos de trolls resaltados en rojo
+- ✨ **Badge de troll**: Nuevo badge `🚫 Troll` para usuarios blacklisted
+- ✨ **Indicador en posts**: Etiqueta `⚠️ TROLL` sobre mensajes de trolls
+- ✨ **Gestión desde el foro**: Botones ⭐ y 🚫 para añadir/quitar de listas
+- 🔧 Panel de configuración ampliado con sección de blacklist
+
+### v1.3.0
+- ✨ Botón ⭐ junto a cada badge para gestionar whitelist
+- ✨ Notificaciones al añadir/quitar usuarios de listas
+- ✨ Sincronización en tiempo real de cambios
 
 ### v1.2.0
 - ✨ **Soporte para listado de foros** (`forumdisplay.php`)

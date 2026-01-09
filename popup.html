@@ -61,7 +61,7 @@
             <!-- Sección de Usuarios Fiables -->
             <section class="config-section">
                 <h2>✅ Usuarios Fiables</h2>
-                <p class="hint">Estos usuarios siempre aparecerán como fiables (verde)</p>
+                <p class="hint">Estos usuarios siempre aparecerán como fiables (azul)</p>
                 
                 <div class="add-user-form">
                     <input type="text" id="nuevo-usuario" placeholder="Nombre de usuario...">
@@ -73,6 +73,23 @@
                 </ul>
 
                 <p class="empty-message" id="sin-usuarios">No hay usuarios en la lista</p>
+            </section>
+
+            <!-- Sección de Usuarios Blacklist -->
+            <section class="config-section blacklist-section">
+                <h2>🚫 Trolls Marcados</h2>
+                <p class="hint">Estos usuarios aparecerán resaltados en rojo</p>
+                
+                <div class="add-user-form">
+                    <input type="text" id="nuevo-troll" placeholder="Nombre de usuario...">
+                    <button id="btn-agregar-troll" class="btn-add btn-add-troll">➕</button>
+                </div>
+
+                <ul id="lista-usuarios-blacklist" class="user-list blacklist">
+                    <!-- Se llena dinámicamente -->
+                </ul>
+
+                <p class="empty-message" id="sin-trolls">No hay usuarios en la lista</p>
             </section>
 
             <!-- Sección de Opciones -->
