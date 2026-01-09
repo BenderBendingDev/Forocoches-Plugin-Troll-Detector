@@ -289,10 +289,8 @@
         const enlaces = document.querySelectorAll('a[href*="member.php?u="]');
         enlaces.forEach(enlace => {
             if (enlace.textContent.trim().toLowerCase() === nombreUsuario.toLowerCase()) {
-                // Buscar el contenedor del post
-                let postContainer = enlace.closest('[class*="post"]') || 
-                                   enlace.closest('table')?.closest('div') ||
-                                   enlace.closest('div')?.parentElement?.parentElement;
+                // Buscar el section del post con las clases específicas
+                let postContainer = enlace.closest('section.without-bottom-corners.without-top-corners');
                 
                 if (postContainer) {
                     if (esTroll) {
@@ -699,9 +697,7 @@
             
             // Resaltar post si es troll
             if (esTroll) {
-                const postContainer = elemento.closest('[class*="post"]') || 
-                                     elemento.closest('table')?.closest('div') ||
-                                     elemento.closest('div')?.parentElement?.parentElement;
+                const postContainer = elemento.closest('section.without-bottom-corners.without-top-corners');
                 if (postContainer) {
                     postContainer.classList.add('fc-troll-post');
                 }
