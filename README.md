@@ -1,81 +1,25 @@
 # 🔍 ForoCoches Troll Detector
 
-Extensión de Chrome para detectar la probabilidad de que un usuario de ForoCoches sea troll, basándose en su actividad y fecha de registro.
+Extensión de Chrome para detectar la probabilidad de que los usuarios de ForoCoches sean trolls, basándose en su actividad y fecha de registro.
 
 ## 📸 Características
 
-- **Badge visual**: Muestra junto al nickname del OP un indicador con la probabilidad de troll
+- **Análisis completo**: Analiza automáticamente a **todos los usuarios** del hilo
+- **Badge visual**: Muestra junto a cada nickname un indicador con la probabilidad de troll
+- **Indicador de OP**: El creador del hilo aparece con una 👑 corona
+- **Panel de configuración**: Personaliza umbrales, pesos y gestiona usuarios fiables
+- **Lista de usuarios fiables**: Marca usuarios de confianza que siempre aparecerán en verde
+- **Caché inteligente**: Guarda datos durante 24h para mayor velocidad
 - **Código de colores**:
-  - 🟢 **Verde** (0-39%): Baja probabilidad - Usuario probablemente legítimo
-  - 🟡 **Amarillo** (40-69%): Probabilidad media - Precaución
-  - 🔴 **Rojo** (70-100%): Alta probabilidad - Posible troll
-
-## 📊 Algoritmo de Detección
-
-El algoritmo calcula la probabilidad basándose en:
-
-1. **Antigüedad de la cuenta** (50%)
-   - Cuentas nuevas = Mayor probabilidad de troll
-   - Cuentas antiguas = Menor probabilidad
-
-2. **Actividad diaria** (50%)
-   - Muchos mensajes/hilos por día = Mayor probabilidad (spam/troll)
-   - Actividad moderada = Menor probabilidad
-
-### Fórmula
-
-```
-Factor Antigüedad = 100 - (días_registrado / días_10_años) * 100
-Factor Actividad = (mensajes_día + hilos_día * 5) / 20 * 100
-
-Probabilidad = (Factor_Antigüedad * 0.5) + (Factor_Actividad * 0.5)
-```
-
-**Bonus/Penalizaciones:**
-- Cuenta < 1 año con > 10 msgs/día: +20% probabilidad
-- Cuenta > 3 años con < 2 msgs/día: -30% probabilidad
-
-## 🚀 Instalación
-
-### Método 1: Instalación en modo desarrollo
-
-1. Descarga o clona este repositorio
-2. Abre Chrome y navega a `chrome://extensions/`
-3. Activa el **"Modo desarrollador"** (esquina superior derecha)
-4. Haz clic en **"Cargar extensión sin empaquetar"**
-5. Selecciona la carpeta `/Plugin`
-6. ¡Listo! La extensión está activa
-
-### Método 2: Crear iconos PNG (opcional)
-
-Para que los iconos se muestren correctamente, puedes convertir el SVG a PNG:
-
-```bash
-# Con ImageMagick instalado:
-convert -background none -resize 16x16 icons/icon.svg icons/icon16.png
-convert -background none -resize 32x32 icons/icon.svg icons/icon32.png
-convert -background none -resize 48x48 icons/icon.svg icons/icon48.png
-convert -background none -resize 128x128 icons/icon.svg icons/icon128.png
-```
-
-O usa cualquier herramienta online como [CloudConvert](https://cloudconvert.com/svg-to-png).
-
-## 📁 Estructura del proyecto
-
-```
-Plugin/
-├── manifest.json      # Configuración de la extensión
-├── content.js         # Script principal de detección
-├── styles.css         # Estilos del badge
-├── icons/             # Iconos de la extensión
-│   └── icon.svg       # Icono fuente
-└── README.md          # Este archivo
-```
+  - ✅ **Azul** - Usuario marcado como fiable (whitelist)
+  - 🟢 **Verde** (0-39%) - Baja probabilidad - Usuario probablemente legítimo
+  - 🟡 **Amarillo** (40-69%) - Probabilidad media - Precaución
+  - 🔴 **Rojo** (70-100%) - Alta probabilidad - Posible troll
 
 ## 🎯 Uso
 
 1. Navega a cualquier hilo de ForoCoches (`showthread.php`)
-2. La extensión analizará automáticamente a **TODOS los usuarios** del hilo
+2. La extensión analizará automáticamente a **todos los usuarios** del hilo
 3. Aparecerá un badge junto a cada nombre con la probabilidad
 4. El **OP** (creador del hilo) tiene una 👑 corona junto a su badge
 5. Pasa el ratón sobre cualquier badge para ver detalles:
@@ -88,31 +32,118 @@ Plugin/
 ### Ejemplo visual:
 ```
 Putérnico 🔴 75% 👑    ← OP del hilo con alta probabilidad
-AspirinaC 🟢 15%       ← Usuario veterano con baja probabilidad
-NuevoCuenta 🟡 55%     ← Usuario con probabilidad media
+AspirinaC ✅ Fiable    ← Usuario en tu whitelist
+Veterano 🟢 15%        ← Usuario veterano con baja probabilidad
+NuevaCuenta 🟡 55%     ← Usuario con probabilidad media
 ```
 
-## ⚙️ Configuración
+## ⚙️ Panel de Configuración
 
-Puedes ajustar los parámetros en `content.js`:
+Haz clic en el **icono de la extensión** para abrir el panel de configuración:
 
-```javascript
-const CONFIG = {
-    PESO_ANTIGUEDAD: 0.5,      // Peso del factor antigüedad (0-1)
-    PESO_ACTIVIDAD: 0.5,       // Peso del factor actividad (0-1)
-    UMBRAL_ALTO: 70,           // % para considerar riesgo alto
-    UMBRAL_MEDIO: 40,          // % para considerar riesgo medio
-    DIAS_CUENTA_NUEVA: 365,    // Días para considerar cuenta "nueva"
-    MENSAJES_DIA_ALTO: 10      // Msgs/día para considerar alta actividad
-};
+### 📊 Umbrales de Riesgo
+| Opción | Descripción | Por defecto |
+|--------|-------------|-------------|
+| Riesgo Alto | A partir de qué % se muestra rojo | 70% |
+| Riesgo Medio | A partir de qué % se muestra amarillo | 40% |
+
+### ⚖️ Pesos del Algoritmo
+| Factor | Descripción | Por defecto |
+|--------|-------------|-------------|
+| Antigüedad | Cuánto importa la edad de la cuenta | 50% |
+| Actividad | Cuánto importa la actividad diaria | 50% |
+
+*Los pesos se balancean automáticamente (siempre suman 100%)*
+
+### ✅ Usuarios Fiables (Whitelist)
+- Añade usuarios que consideres de confianza
+- Estos usuarios siempre aparecerán con badge azul `✅ Fiable`
+- Se sincronizan con tu cuenta de Chrome
+
+### ⚙️ Opciones adicionales
+- **Mostrar tooltip detallado**: Activa/desactiva la información al pasar el ratón
+- **Analizar automáticamente**: Activa/desactiva el análisis al cargar la página
+
+## 📊 Algoritmo de Detección
+
+El algoritmo calcula la probabilidad basándose en dos factores principales:
+
+### 1. Antigüedad de la cuenta (configurable)
+- Cuentas nuevas = Mayor probabilidad de troll
+- Cuentas antiguas = Menor probabilidad
+- Referencia: 10 años = 0% de factor antigüedad
+
+### 2. Actividad diaria (configurable)
+- Muchos mensajes/hilos por día = Mayor probabilidad
+- Actividad moderada = Menor probabilidad
+- Los hilos abiertos pesan x5 más que los mensajes
+
+### Fórmula
+
 ```
+Factor Antigüedad = 100 - (días_registrado / 3650) * 100
+Factor Actividad = min(100, (msgs_día + hilos_día * 5) / 20 * 100)
+
+Probabilidad = (Factor_Antigüedad * peso_antigüedad) + (Factor_Actividad * peso_actividad)
+```
+
+### Bonus/Penalizaciones automáticas:
+- Cuenta < 1 año con > 10 msgs/día: **+20%** probabilidad
+- Cuenta > 3 años con < 2 msgs/día: **-30%** probabilidad
+
+## 🚀 Instalación
+
+### Instalación en modo desarrollo
+
+1. Descarga o clona este repositorio
+2. Abre Chrome y navega a `chrome://extensions/`
+3. Activa el **"Modo desarrollador"** (esquina superior derecha)
+4. Haz clic en **"Cargar extensión sin empaquetar"**
+5. Selecciona la carpeta `Plugin`
+6. ¡Listo! La extensión está activa
+
+### Actualizar la extensión
+
+Después de hacer cambios en los archivos:
+1. Ve a `chrome://extensions/`
+2. Busca "FC Troll Detector"
+3. Haz clic en el botón 🔄 (recargar)
+
+## 📁 Estructura del proyecto
+
+```
+Plugin/
+├── manifest.json      # Configuración de la extensión (v1.1.0)
+├── content.js         # Script principal de detección
+├── styles.css         # Estilos de los badges
+├── popup.html         # Panel de configuración
+├── popup.css          # Estilos del panel
+├── popup.js           # Lógica del panel
+├── icons/             # Iconos de la extensión
+│   └── icon.svg       # Icono fuente
+├── LICENSE            # Licencia MIT
+└── README.md          # Este archivo
+```
+
+## 💾 Almacenamiento de datos
+
+### Caché de usuarios (localStorage)
+- Los datos de cada usuario se guardan durante **24 horas**
+- Formato: `fc_troll_cache_{userId}`
+- Hace la extensión mucho más rápida en visitas posteriores
+
+### Configuración (Chrome Storage Sync)
+- Tu configuración se sincroniza con tu cuenta de Chrome
+- Disponible en todos tus dispositivos
+- Clave: `fcTrollConfig`
 
 ## 🔒 Privacidad
 
 - La extensión **NO** recopila datos personales
 - **NO** envía información a servidores externos
-- Todo el procesamiento es local en tu navegador
-- Solo accede a páginas públicas de ForoCoches
+- Todo el procesamiento es **local** en tu navegador
+- Solo accede a páginas **públicas** de ForoCoches
+- La configuración se guarda en tu cuenta de Chrome (opcional)
 
 ## 📝 Licencia
 
@@ -135,6 +166,22 @@ El algoritmo es una herramienta orientativa basada en estadísticas públicas. U
 ## 🤝 Contribuir
 
 ¿Ideas para mejorar el algoritmo? ¿Bugs? ¡Las contribuciones son bienvenidas!
+
+## 📋 Changelog
+
+### v1.1.0
+- ✨ Panel de configuración con popup
+- ✨ Lista de usuarios fiables (whitelist)
+- ✨ Umbrales y pesos personalizables
+- ✨ Caché persistente en localStorage (24h)
+- ✨ Sincronización de configuración con Chrome
+- 🐛 Corrección de bug NaN% en badges
+
+### v1.0.0
+- 🎉 Versión inicial
+- Análisis de todos los usuarios del hilo
+- Badge con código de colores
+- Indicador de OP con corona
 
 ---
 
