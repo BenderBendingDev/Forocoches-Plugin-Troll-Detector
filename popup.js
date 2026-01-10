@@ -44,6 +44,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         analizarAuto: document.getElementById('analizar-auto'),
         btnReset: document.getElementById('btn-reset'),
         btnGuardar: document.getElementById('btn-guardar'),
+        btnExportar: document.getElementById('btn-exportar'),
+        inputImportar: document.getElementById('input-importar'),
         statusMessage: document.getElementById('status-message')
     };
 
@@ -207,6 +209,10 @@ function configurarEventListeners() {
     // Botones principales
     elementos.btnReset.addEventListener('click', restaurarConfiguracion);
     elementos.btnGuardar.addEventListener('click', guardarConfiguracion);
+    
+    // Botones de importar/exportar
+    elementos.btnExportar.addEventListener('click', exportarConfiguracion);
+    elementos.inputImportar.addEventListener('change', importarConfiguracion);
 }
 
 /**
@@ -346,6 +352,140 @@ function renderizarUsuariosBlacklist(usuarios) {
         
         elementos.listaUsuariosBlacklist.appendChild(li);
     }
+}
+
+/**
+ * Exporta toda la configuración a un archivo JSON
+ */
+async function exportarConfiguracion() {
+    try {
+        const config = {
+            umbralAlto: parseInt(elementos.umbralAlto.value),
+            umbralMedio: parseInt(elementos.umbralMedio.value),
+            pesoAntiguedad: parseInt(elementos.pesoAntiguedad.value),
+            pesoActividad: parseInt(elementos.pesoActividad.value),
+            usuariosFiables: obtenerUsuariosFiables(),
+            usuariosBlacklist: obtenerUsuariosBlacklist(),
+            mostrarTooltip: elementos.mostrarTooltip.checked,
+            analizarAuto: elementos.analizarAuto.checked,
+            // Metadatos del export
+            _exportInfo: {
+                version: '1.4.0',
+                fecha: new Date().toISOString(),
+                extension: 'FC Troll Detector'
+            }
+        };
+        
+        const jsonString = JSON.stringify(config, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        // Crear nombre de archivo con fecha
+        const fecha = new Date().toISOString().split('T')[0];
+        const nombreArchivo = `fc-troll-detector-config-${fecha}.json`;
+        
+        // Crear enlace de descarga y clickearlo
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = nombreArchivo;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        mostrarMensaje('📤 Configuración exportada');
+    } catch (error) {
+        console.error('Error exportando configuración:', error);
+        mostrarMensaje('Error al exportar', true);
+    }
+}
+
+/**
+ * Importa la configuración desde un archivo JSON
+ */
+async function importarConfiguracion(event) {
+    const archivo = event.target.files[0];
+    if (!archivo) return;
+    
+    try {
+        const texto = await archivo.text();
+        const config = JSON.parse(texto);
+        
+        // Validar que tiene la estructura básica esperada
+        if (!validarConfiguracion(config)) {
+            mostrarMensaje('Archivo no válido', true);
+            return;
+        }
+        
+        // Aplicar valores a los controles
+        if (config.umbralAlto !== undefined) {
+            elementos.umbralAlto.value = config.umbralAlto;
+            elementos.umbralAltoValue.textContent = config.umbralAlto;
+        }
+        
+        if (config.umbralMedio !== undefined) {
+            elementos.umbralMedio.value = config.umbralMedio;
+            elementos.umbralMedioValue.textContent = config.umbralMedio;
+        }
+        
+        if (config.pesoAntiguedad !== undefined) {
+            elementos.pesoAntiguedad.value = config.pesoAntiguedad;
+            elementos.pesoAntiguedadValue.textContent = config.pesoAntiguedad + '%';
+        }
+        
+        if (config.pesoActividad !== undefined) {
+            elementos.pesoActividad.value = config.pesoActividad;
+            elementos.pesoActividadValue.textContent = config.pesoActividad + '%';
+        }
+        
+        if (config.mostrarTooltip !== undefined) {
+            elementos.mostrarTooltip.checked = config.mostrarTooltip;
+        }
+        
+        if (config.analizarAuto !== undefined) {
+            elementos.analizarAuto.checked = config.analizarAuto;
+        }
+        
+        // Renderizar listas de usuarios
+        renderizarUsuariosFiables(config.usuariosFiables || []);
+        renderizarUsuariosBlacklist(config.usuariosBlacklist || []);
+        
+        mostrarMensaje('📥 Configuración importada');
+        
+        // Limpiar el input para permitir reimportar el mismo archivo
+        event.target.value = '';
+        
+    } catch (error) {
+        console.error('Error importando configuración:', error);
+        mostrarMensaje('Error al leer archivo', true);
+        event.target.value = '';
+    }
+}
+
+/**
+ * Valida que la configuración importada tenga una estructura válida
+ */
+function validarConfiguracion(config) {
+    // Verificar que es un objeto
+    if (typeof config !== 'object' || config === null) {
+        return false;
+    }
+    
+    // Verificar que tiene al menos algunos campos esperados
+    const camposEsperados = ['umbralAlto', 'umbralMedio', 'usuariosFiables', 'usuariosBlacklist'];
+    const tieneCampos = camposEsperados.some(campo => config.hasOwnProperty(campo));
+    
+    if (!tieneCampos) {
+        return false;
+    }
+    
+    // Validar tipos si existen
+    if (config.umbralAlto !== undefined && typeof config.umbralAlto !== 'number') return false;
+    if (config.umbralMedio !== undefined && typeof config.umbralMedio !== 'number') return false;
+    if (config.usuariosFiables !== undefined && !Array.isArray(config.usuariosFiables)) return false;
+    if (config.usuariosBlacklist !== undefined && !Array.isArray(config.usuariosBlacklist)) return false;
+    
+    return true;
 }
 
 /**

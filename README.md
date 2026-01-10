@@ -88,6 +88,15 @@ Haz clic en el **icono de la extensión** para abrir el panel de configuración:
 - **Mostrar tooltip detallado**: Activa/desactiva la información al pasar el ratón
 - **Analizar automáticamente**: Activa/desactiva el análisis al cargar la página
 
+### 📦 Importar / Exportar
+- **Exportar JSON**: Descarga toda tu configuración en un archivo JSON
+- **Importar JSON**: Carga una configuración desde un archivo JSON
+- Perfecto para:
+  - 🔄 Sincronizar entre dispositivos
+  - 👥 Compartir configuración con amigos
+  - 💾 Hacer backup de tus listas de usuarios
+  - 🚀 Migrar a otro navegador
+
 ## 📊 Algoritmo de Detección
 
 El algoritmo calcula la probabilidad basándose en dos factores principales:
@@ -137,7 +146,7 @@ Después de hacer cambios en los archivos:
 
 ```
 Plugin/
-├── manifest.json      # Configuración de la extensión (v1.4.0)
+├── manifest.json      # Configuración de la extensión (v1.5.0)
 ├── content.js         # Script principal (detecta listado vs hilo)
 ├── styles.css         # Estilos de badges, blacklist y resaltados
 ├── popup.html         # Panel de configuración
@@ -192,6 +201,11 @@ El algoritmo es una herramienta orientativa basada en estadísticas públicas. U
 ¿Ideas para mejorar el algoritmo? ¿Bugs? ¡Las contribuciones son bienvenidas!
 
 ## 📋 Changelog
+
+### v1.5.0
+- ✨ **Importar/Exportar configuración**: Exporta e importa toda tu configuración en JSON
+- ✨ Comparte listas de usuarios entre dispositivos o con amigos
+- ✨ Backup completo de whitelist, blacklist y ajustes
 
 ### v1.4.0
 - ✨ **Sistema de Blacklist**: Marca usuarios como trolls conocidos
