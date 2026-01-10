@@ -1031,9 +1031,13 @@
         const url = window.location.href;
         
         if (url.includes('showthread.php')) {
-            await ejecutarEnHilo();
+            // En hilos: analizar usuarios del hilo + trending del sidebar
+            await Promise.all([
+                ejecutarEnHilo(),
+                ejecutarEnTrending()
+            ]);
         } else if (url.includes('forumdisplay.php')) {
-            // Ejecutar tanto en listado como en trending
+            // En listado: analizar hilos del listado + trending del sidebar
             await Promise.all([
                 ejecutarEnListado(),
                 ejecutarEnTrending()
