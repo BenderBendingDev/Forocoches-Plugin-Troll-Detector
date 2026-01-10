@@ -170,8 +170,6 @@ Plugin/
 ├── popup.html         # Panel de configuración
 ├── popup.css          # Estilos del panel (incluye blacklist)
 ├── popup.js           # Lógica del panel (whitelist + blacklist)
-├── icons/             # Iconos de la extensión
-│   └── icon.svg       # Icono fuente
 ├── LICENSE            # Licencia MIT
 └── README.md          # Este archivo
 ```
