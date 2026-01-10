@@ -502,11 +502,12 @@
         const match = urlPerfil.match(/u=(\d+)/);
         const userId = match ? match[1] : urlPerfil;
         
+        // Caché en memoria (sesión actual)
         if (cacheUsuarios.has(userId)) {
             return cacheUsuarios.get(userId);
         }
         
-        // Caché en localStorage
+        // Caché en localStorage (persistente 24h)
         try {
             const cacheKey = `fc_troll_cache_${userId}`;
             const cached = localStorage.getItem(cacheKey);
