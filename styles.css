@@ -349,3 +349,12 @@
 .fc-troll-badge:contains('👑') {
     font-weight: 700;
 }
+
+/* Resaltado de hilos en Trending cuando OP es troll */
+.fc-troll-trending {
+    background: linear-gradient(135deg, rgba(255,0,0,0.15) 0%, rgba(180,0,0,0.1) 100%) !important;
+    border-left: 3px solid #ff4444 !important;
+    border-radius: 6px;
+    padding-left: 8px !important;
+    margin-left: -8px;
+}

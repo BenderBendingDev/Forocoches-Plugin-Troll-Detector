@@ -855,6 +855,126 @@
         console.log('✅ FC Troll Detector: Análisis de listado completado');
     }
 
+    // ==================== MODO TRENDING (sidebar) ====================
+
+    function encontrarHilosTrending() {
+        const trendingSection = document.querySelector('#sidebar > section:nth-child(1)');
+        if (!trendingSection) return [];
+        
+        // Verificar que es la sección de Trending
+        const titulo = trendingSection.querySelector('h2');
+        if (!titulo || !titulo.textContent.includes('Trending')) return [];
+        
+        const hilos = [];
+        
+        // Buscar los enlaces a hilos (showthread.php?t=XXXXX)
+        const enlacesHilos = trendingSection.querySelectorAll('a[href*="showthread.php?t="]');
+        
+        for (const enlace of enlacesHilos) {
+            const href = enlace.getAttribute('href');
+            const threadMatch = href.match(/t=(\d+)/);
+            if (!threadMatch) continue;
+            
+            const threadId = threadMatch[1];
+            const tituloHilo = enlace.textContent.trim();
+            
+            // El título está dentro de un <strong>
+            const strongElement = enlace.querySelector('strong');
+            if (!strongElement) continue;
+            
+            // Buscar el contenedor padre para encontrar el nombre del OP
+            let container = enlace.closest('div.ellipse');
+            let opNombre = null;
+            
+            if (container) {
+                // Buscar el enlace con @NombreUsuario
+                const opLink = container.querySelector('a[href*="showthread.php?p="] span.ellipse');
+                if (opLink && opLink.textContent.startsWith('@')) {
+                    opNombre = opLink.textContent.substring(1).trim(); // Quitar @
+                }
+            }
+            
+            hilos.push({
+                threadId,
+                titulo: tituloHilo,
+                opNombre,
+                tituloElement: strongElement,
+                enlaceElement: enlace
+            });
+        }
+        
+        return hilos;
+    }
+
+    async function procesarHiloTrending(hilo) {
+        // Verificar que no tenga ya un badge
+        const parent = hilo.tituloElement.parentElement;
+        if (parent.querySelector('.fc-badge-container')) {
+            return;
+        }
+        
+        // Crear badge de carga junto al título
+        const loadingBadge = crearBadgeCargando(true);
+        parent.appendChild(document.createTextNode(' '));
+        parent.appendChild(loadingBadge);
+        
+        // Obtener el OP del hilo
+        const opInfo = await obtenerOPDeHilo(hilo.threadId);
+        
+        loadingBadge.remove();
+        
+        if (!opInfo) return;
+        
+        // Obtener datos del perfil del OP
+        const datos = await obtenerDatosUsuario(opInfo.href);
+        
+        if (!datos) return;
+        
+        const probabilidad = calcularProbabilidadTroll(datos.fechaRegistro, datos.hilos, datos.mensajes);
+        const nombreOP = opInfo.nombre || hilo.opNombre;
+        const esFiable = esUsuarioFiable(nombreOP);
+        const esTroll = esUsuarioBlacklist(nombreOP);
+        
+        // Crear badge y botones (compacto)
+        const badge = crearBadge(probabilidad, datos, true, esFiable, esTroll, true, nombreOP);
+        const botonWL = crearBotonWhitelist(nombreOP, esFiable, true);
+        const botonBL = crearBotonBlacklist(nombreOP, esTroll, true);
+        const container = crearContenedorBadge(badge, botonWL, botonBL, nombreOP);
+        
+        // Insertar después del título
+        parent.appendChild(document.createTextNode(' '));
+        parent.appendChild(container);
+        
+        // Resaltar si es troll
+        if (esTroll) {
+            const hiloContainer = hilo.enlaceElement.closest('div.ellipse')?.parentElement;
+            if (hiloContainer) {
+                hiloContainer.classList.add('fc-troll-trending');
+            }
+        }
+    }
+
+    async function ejecutarEnTrending() {
+        console.log('🔥 FC Troll Detector: Analizando Trending...');
+        
+        const hilos = encontrarHilosTrending();
+        if (hilos.length === 0) {
+            console.log('FC Troll Detector: No se encontró sección Trending');
+            return;
+        }
+        
+        console.log(`🔥 Encontrados ${hilos.length} hilos en Trending`);
+        
+        // Procesar en paralelo
+        await procesarEnParalelo(
+            hilos,
+            procesarHiloTrending,
+            CONFIG.CONCURRENCIA_LISTADO
+        );
+        
+        console.log('✅ FC Troll Detector: Análisis de Trending completado');
+    }
+
     // ==================== INICIO ====================
 
     async function detectarYEjecutar() {
@@ -870,7 +990,11 @@
         if (url.includes('showthread.php')) {
             await ejecutarEnHilo();
         } else if (url.includes('forumdisplay.php')) {
-            await ejecutarEnListado();
+            // Ejecutar tanto en listado como en trending
+            await Promise.all([
+                ejecutarEnListado(),
+                ejecutarEnTrending()
+            ]);
         }
     }
 

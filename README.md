@@ -4,9 +4,10 @@ Extensión de Chrome para detectar la probabilidad de que los usuarios de ForoCo
 
 ## 📸 Características
 
-- **Doble modo de funcionamiento**:
+- **Triple modo de funcionamiento**:
   - 📋 **En listados**: Muestra el badge del OP junto al título de cada hilo
   - 💬 **En hilos**: Analiza a todos los usuarios que participan
+  - 🔥 **En Trending**: Analiza los 5 hilos destacados del sidebar
 - **Badge visual**: Muestra junto a cada nickname un indicador con la probabilidad de troll
 - **Indicador de OP**: El creador del hilo aparece con una 👑 corona
 - **Panel de configuración**: Personaliza umbrales, pesos y gestiona listas de usuarios
@@ -36,6 +37,23 @@ Extensión de Chrome para detectar la probabilidad de que los usuarios de ForoCo
 🟢 12% Peña Real Oviedo Vol. LVII            ← OP veterano
 🟡 45% Sorteo 5 invis by the face            ← OP con precaución
 ✅     LLEVO 1 MES ESTUDIANDO ALEMÁN         ← OP en tu whitelist
+```
+
+### 🔥 En el sidebar Trending
+
+1. En el sidebar derecho aparece la sección **Trending** con los 5 hilos más activos
+2. La extensión analiza automáticamente al OP de cada hilo trending
+3. Aparece un badge compacto junto al título
+4. Los hilos de trolls se resaltan con borde rojo
+
+```
+🔥 Trending
+──────────────────────────────
+1  Noticia viral del momento 🔴 82%    ← OP sospechoso
+2  Debate sobre política ✅            ← OP fiable  
+3  Hilo polémico 🚫 [RESALTADO]        ← OP en blacklist
+4  Pregunta random 🟢 15%              ← OP veterano
+5  Sorteo de algo 🟡 48%               ← Precaución
 ```
 
 ### 💬 Dentro de un hilo (`showthread.php`)
@@ -146,7 +164,7 @@ Después de hacer cambios en los archivos:
 
 ```
 Plugin/
-├── manifest.json      # Configuración de la extensión (v1.5.0)
+├── manifest.json      # Configuración de la extensión (v1.6.0)
 ├── content.js         # Script principal (detecta listado vs hilo)
 ├── styles.css         # Estilos de badges, blacklist y resaltados
 ├── popup.html         # Panel de configuración
@@ -201,6 +219,12 @@ El algoritmo es una herramienta orientativa basada en estadísticas públicas. U
 ¿Ideas para mejorar el algoritmo? ¿Bugs? ¡Las contribuciones son bienvenidas!
 
 ## 📋 Changelog
+
+### v1.6.0
+- ✨ **Soporte para Trending**: Analiza los 5 hilos destacados del sidebar
+- ✨ Badge compacto en cada hilo trending
+- ✨ Resaltado visual rojo para hilos de trolls en trending
+- ✨ Procesamiento en paralelo junto con el listado principal
 
 ### v1.5.0
 - ✨ **Importar/Exportar configuración**: Exporta e importa toda tu configuración en JSON
