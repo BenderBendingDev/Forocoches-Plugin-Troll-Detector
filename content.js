@@ -535,16 +535,58 @@
             
             let hilos = 0;
             let mensajes = 0;
-            const textoCompleto = doc.body.textContent;
             
-            const hilosMatch = textoCompleto.match(/([\d.,]+)\s*Hilos?/i);
-            if (hilosMatch) {
-                hilos = parseInt(hilosMatch[1].replace(/[.,]/g, ''), 10);
+            // Buscar dentro de <main> para evitar coger datos del sidebar/menú del usuario logueado
+            const mainContent = doc.querySelector('main');
+            
+            if (mainContent) {
+                // Buscar todos los enlaces con starteronly y encontrar el que tiene un número
+                const todosHilosLinks = mainContent.querySelectorAll('a[href*="starteronly=1"]');
+                const todosMensajesLinks = mainContent.querySelectorAll('a[href*="showposts=1"]');
+                
+                // El enlace correcto tiene formato "X Hilos" o "X Mensajes" (número + texto)
+                for (const link of todosHilosLinks) {
+                    const texto = link.textContent.trim();
+                    // Buscar el que tiene un número seguido de "Hilos" (no "Hilos que ha iniciado")
+                    if (/^\s*[\d.,]+\s*Hilos?\s*$/i.test(texto.replace(/\s+/g, ' '))) {
+                        const numeros = texto.replace(/[^\d]/g, '');
+                        if (numeros) {
+                            hilos = parseInt(numeros, 10) || 0;
+                            break;
+                        }
+                    }
+                }
+                
+                for (const link of todosMensajesLinks) {
+                    const texto = link.textContent.trim();
+                    // Buscar el que tiene un número seguido de "Mensajes" (no "Mensajes en los hilos")
+                    if (/^\s*[\d.,]+\s*Mensajes?\s*$/i.test(texto.replace(/\s+/g, ' '))) {
+                        const numeros = texto.replace(/[^\d]/g, '');
+                        if (numeros) {
+                            mensajes = parseInt(numeros, 10) || 0;
+                            break;
+                        }
+                    }
+                }
             }
             
-            const mensajesMatch = textoCompleto.match(/([\d.,]+)\s*Mensajes?/i);
-            if (mensajesMatch) {
-                mensajes = parseInt(mensajesMatch[1].replace(/[.,]/g, ''), 10);
+            // Método 2: Fallback con regex si los selectores fallan
+            if (hilos === 0 || mensajes === 0) {
+                const textoCompleto = doc.body.textContent;
+                
+                if (hilos === 0) {
+                    const hilosMatch = textoCompleto.match(/([\d.,]+)\s*Hilos?/i);
+                    if (hilosMatch) {
+                        hilos = parseInt(hilosMatch[1].replace(/[.,]/g, ''), 10);
+                    }
+                }
+                
+                if (mensajes === 0) {
+                    const mensajesMatch = textoCompleto.match(/([\d.,]+)\s*Mensajes?/i);
+                    if (mensajesMatch) {
+                        mensajes = parseInt(mensajesMatch[1].replace(/[.,]/g, ''), 10);
+                    }
+                }
             }
             
             if (!fechaRegistroStr) return null;
